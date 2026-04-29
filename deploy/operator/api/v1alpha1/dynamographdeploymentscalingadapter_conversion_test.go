@@ -28,9 +28,9 @@ import (
 	v1beta1 "github.com/ai-dynamo/dynamo/deploy/operator/api/v1beta1"
 )
 
-// dgdsaRoundTripFromV1beta1 converts a v1beta1 DGDSA to v1alpha1 and back to
+// dynamoGraphDeploymentScalingAdapterRoundTripFromV1beta1 converts a v1beta1 DGDSA to v1alpha1 and back to
 // v1beta1, asserting bitwise equality at the v1beta1 (hub) boundary.
-func dgdsaRoundTripFromV1beta1(t *testing.T, src *v1beta1.DynamoGraphDeploymentScalingAdapter) *v1beta1.DynamoGraphDeploymentScalingAdapter {
+func dynamoGraphDeploymentScalingAdapterRoundTripFromV1beta1(t *testing.T, src *v1beta1.DynamoGraphDeploymentScalingAdapter) *v1beta1.DynamoGraphDeploymentScalingAdapter {
 	t.Helper()
 	a := &DynamoGraphDeploymentScalingAdapter{}
 	if err := a.ConvertFrom(src); err != nil {
@@ -43,8 +43,8 @@ func dgdsaRoundTripFromV1beta1(t *testing.T, src *v1beta1.DynamoGraphDeploymentS
 	return out
 }
 
-// dgdsaRoundTripFromV1alpha1 converts a v1alpha1 DGDSA to v1beta1 and back.
-func dgdsaRoundTripFromV1alpha1(t *testing.T, src *DynamoGraphDeploymentScalingAdapter) *DynamoGraphDeploymentScalingAdapter {
+// dynamoGraphDeploymentScalingAdapterRoundTripFromV1alpha1 converts a v1alpha1 DGDSA to v1beta1 and back.
+func dynamoGraphDeploymentScalingAdapterRoundTripFromV1alpha1(t *testing.T, src *DynamoGraphDeploymentScalingAdapter) *DynamoGraphDeploymentScalingAdapter {
 	t.Helper()
 	b := &v1beta1.DynamoGraphDeploymentScalingAdapter{}
 	if err := src.ConvertTo(b); err != nil {
@@ -57,7 +57,7 @@ func dgdsaRoundTripFromV1alpha1(t *testing.T, src *DynamoGraphDeploymentScalingA
 	return out
 }
 
-func TestDGDSA_RoundTripFromV1beta1_Minimal(t *testing.T) {
+func TestDynamoGraphDeploymentScalingAdapter_RoundTripFromV1beta1_Minimal(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeploymentScalingAdapter{
 		ObjectMeta: metav1.ObjectMeta{Name: "adapter", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentScalingAdapterSpec{
@@ -68,13 +68,13 @@ func TestDGDSA_RoundTripFromV1beta1_Minimal(t *testing.T) {
 			},
 		},
 	}
-	got := dgdsaRoundTripFromV1beta1(t, src)
+	got := dynamoGraphDeploymentScalingAdapterRoundTripFromV1beta1(t, src)
 	if diff := cmp.Diff(src, got); diff != "" {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDGDSA_RoundTripFromV1beta1_FullStatus(t *testing.T) {
+func TestDynamoGraphDeploymentScalingAdapter_RoundTripFromV1beta1_FullStatus(t *testing.T) {
 	now := metav1.NewTime(time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC))
 	src := &v1beta1.DynamoGraphDeploymentScalingAdapter{
 		ObjectMeta: metav1.ObjectMeta{
@@ -96,13 +96,13 @@ func TestDGDSA_RoundTripFromV1beta1_FullStatus(t *testing.T) {
 			LastScaleTime: &now,
 		},
 	}
-	got := dgdsaRoundTripFromV1beta1(t, src)
+	got := dynamoGraphDeploymentScalingAdapterRoundTripFromV1beta1(t, src)
 	if diff := cmp.Diff(src, got); diff != "" {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDGDSA_RoundTripFromV1alpha1_Minimal(t *testing.T) {
+func TestDynamoGraphDeploymentScalingAdapter_RoundTripFromV1alpha1_Minimal(t *testing.T) {
 	src := &DynamoGraphDeploymentScalingAdapter{
 		ObjectMeta: metav1.ObjectMeta{Name: "adapter", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentScalingAdapterSpec{
@@ -113,13 +113,13 @@ func TestDGDSA_RoundTripFromV1alpha1_Minimal(t *testing.T) {
 			},
 		},
 	}
-	got := dgdsaRoundTripFromV1alpha1(t, src)
+	got := dynamoGraphDeploymentScalingAdapterRoundTripFromV1alpha1(t, src)
 	if diff := cmp.Diff(src, got, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDGDSA_RoundTripFromV1alpha1_FullStatus(t *testing.T) {
+func TestDynamoGraphDeploymentScalingAdapter_RoundTripFromV1alpha1_FullStatus(t *testing.T) {
 	now := metav1.NewTime(time.Date(2026, 4, 26, 10, 30, 0, 0, time.UTC))
 	src := &DynamoGraphDeploymentScalingAdapter{
 		ObjectMeta: metav1.ObjectMeta{
@@ -141,15 +141,15 @@ func TestDGDSA_RoundTripFromV1alpha1_FullStatus(t *testing.T) {
 			LastScaleTime: &now,
 		},
 	}
-	got := dgdsaRoundTripFromV1alpha1(t, src)
+	got := dynamoGraphDeploymentScalingAdapterRoundTripFromV1alpha1(t, src)
 	if diff := cmp.Diff(src, got, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
 
-// TestDGDSA_ConvertTo_TypeError verifies the type-assert guard rejects an
+// TestDynamoGraphDeploymentScalingAdapter_ConvertTo_TypeError verifies the type-assert guard rejects an
 // unexpected hub target without panicking.
-func TestDGDSA_ConvertTo_TypeError(t *testing.T) {
+func TestDynamoGraphDeploymentScalingAdapter_ConvertTo_TypeError(t *testing.T) {
 	src := &DynamoGraphDeploymentScalingAdapter{}
 	wrong := &v1beta1.DynamoGraphDeployment{}
 	if err := src.ConvertTo(wrong); err == nil {
@@ -157,8 +157,8 @@ func TestDGDSA_ConvertTo_TypeError(t *testing.T) {
 	}
 }
 
-// TestDGDSA_ConvertFrom_TypeError mirrors the ConvertTo guard for ConvertFrom.
-func TestDGDSA_ConvertFrom_TypeError(t *testing.T) {
+// TestDynamoGraphDeploymentScalingAdapter_ConvertFrom_TypeError mirrors the ConvertTo guard for ConvertFrom.
+func TestDynamoGraphDeploymentScalingAdapter_ConvertFrom_TypeError(t *testing.T) {
 	dst := &DynamoGraphDeploymentScalingAdapter{}
 	wrong := &v1beta1.DynamoGraphDeployment{}
 	if err := dst.ConvertFrom(wrong); err == nil {

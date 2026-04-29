@@ -30,8 +30,8 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
-// newV1alpha1DGDR builds a fully-populated v1alpha1 DGDR for use in tests.
-func newV1alpha1DGDR() *DynamoGraphDeploymentRequest {
+// newV1alpha1DynamoGraphDeploymentRequest builds a fully-populated v1alpha1 DGDR for use in tests.
+func newV1alpha1DynamoGraphDeploymentRequest() *DynamoGraphDeploymentRequest {
 	profilingBlob := map[string]interface{}{
 		"sla": map[string]interface{}{
 			"ttft": float64(500),
@@ -92,8 +92,8 @@ func newV1alpha1DGDR() *DynamoGraphDeploymentRequest {
 	}
 }
 
-// newV1beta1DGDR builds a fully-populated v1beta1 DGDR for use in tests.
-func newV1beta1DGDR() *v1beta1.DynamoGraphDeploymentRequest {
+// newV1beta1DynamoGraphDeploymentRequest builds a fully-populated v1beta1 DGDR for use in tests.
+func newV1beta1DynamoGraphDeploymentRequest() *v1beta1.DynamoGraphDeploymentRequest {
 	ttft := float64(300)
 	itl := float64(15)
 	isl := int32(1024)
@@ -145,7 +145,7 @@ func newV1beta1DGDR() *v1beta1.DynamoGraphDeploymentRequest {
 
 // TestConvertTo_SpecFields verifies that key v1alpha1 spec fields land in the correct v1beta1 locations.
 func TestConvertTo_SpecFields(t *testing.T) {
-	src := newV1alpha1DGDR()
+	src := newV1alpha1DynamoGraphDeploymentRequest()
 	dst := &v1beta1.DynamoGraphDeploymentRequest{}
 
 	if err := src.ConvertTo(dst); err != nil {
@@ -230,7 +230,7 @@ func TestConvertTo_SpecFields(t *testing.T) {
 
 // TestConvertTo_StatusFields verifies that key v1alpha1 status fields land in the correct v1beta1 locations.
 func TestConvertTo_StatusFields(t *testing.T) {
-	src := newV1alpha1DGDR()
+	src := newV1alpha1DynamoGraphDeploymentRequest()
 	dst := &v1beta1.DynamoGraphDeploymentRequest{}
 
 	if err := src.ConvertTo(dst); err != nil {
@@ -263,7 +263,7 @@ func TestConvertTo_StatusFields(t *testing.T) {
 
 // TestAlpha1RoundTrip verifies v1alpha1 → v1beta1 → v1alpha1 preserves all round-tripped fields.
 func TestAlpha1RoundTrip(t *testing.T) {
-	original := newV1alpha1DGDR()
+	original := newV1alpha1DynamoGraphDeploymentRequest()
 
 	// Step 1: v1alpha1 → v1beta1
 	hub := &v1beta1.DynamoGraphDeploymentRequest{}
@@ -322,7 +322,7 @@ func TestAlpha1RoundTrip(t *testing.T) {
 
 // TestHubRoundTrip verifies v1beta1 → v1alpha1 → v1beta1 preserves all round-tripped fields.
 func TestHubRoundTrip(t *testing.T) {
-	original := newV1beta1DGDR()
+	original := newV1beta1DynamoGraphDeploymentRequest()
 
 	// Step 1: v1beta1 → v1alpha1
 	spoke := &DynamoGraphDeploymentRequest{}
@@ -351,13 +351,13 @@ func TestHubRoundTrip(t *testing.T) {
 	}
 }
 
-func TestDGDR_IntermediateHubEditsWinOverPreservedSpoke(t *testing.T) {
+func TestDynamoGraphDeploymentRequest_IntermediateHubEditsWinOverPreservedSpoke(t *testing.T) {
 	const (
 		editedModel = "edited-model"
 		editedImage = "edited-image"
 	)
 
-	original := newV1alpha1DGDR()
+	original := newV1alpha1DynamoGraphDeploymentRequest()
 	hub := &v1beta1.DynamoGraphDeploymentRequest{}
 	if err := original.ConvertTo(hub); err != nil {
 		t.Fatalf("ConvertTo() error = %v", err)
@@ -382,8 +382,8 @@ func TestDGDR_IntermediateHubEditsWinOverPreservedSpoke(t *testing.T) {
 	}
 }
 
-func TestDGDR_IntermediateHubStatusWinsOverPreservedSpokeStatus(t *testing.T) {
-	original := newV1alpha1DGDR()
+func TestDynamoGraphDeploymentRequest_IntermediateHubStatusWinsOverPreservedSpokeStatus(t *testing.T) {
+	original := newV1alpha1DynamoGraphDeploymentRequest()
 	hub := &v1beta1.DynamoGraphDeploymentRequest{}
 	if err := original.ConvertTo(hub); err != nil {
 		t.Fatalf("ConvertTo() error = %v", err)
@@ -413,8 +413,8 @@ func TestDGDR_IntermediateHubStatusWinsOverPreservedSpokeStatus(t *testing.T) {
 	}
 }
 
-func TestDGDR_IntermediateHubOnlyEditsArePreservedWithSpokeSnapshot(t *testing.T) {
-	original := newV1alpha1DGDR()
+func TestDynamoGraphDeploymentRequest_IntermediateHubOnlyEditsArePreservedWithSpokeSnapshot(t *testing.T) {
+	original := newV1alpha1DynamoGraphDeploymentRequest()
 	hub := &v1beta1.DynamoGraphDeploymentRequest{}
 	if err := original.ConvertTo(hub); err != nil {
 		t.Fatalf("ConvertTo() error = %v", err)
@@ -439,8 +439,8 @@ func TestDGDR_IntermediateHubOnlyEditsArePreservedWithSpokeSnapshot(t *testing.T
 	}
 }
 
-func TestDGDR_IntermediateSpokeEditsWinOverPreservedHub(t *testing.T) {
-	original := newV1beta1DGDR()
+func TestDynamoGraphDeploymentRequest_IntermediateSpokeEditsWinOverPreservedHub(t *testing.T) {
+	original := newV1beta1DynamoGraphDeploymentRequest()
 	spoke := &DynamoGraphDeploymentRequest{}
 	if err := spoke.ConvertFrom(original); err != nil {
 		t.Fatalf("ConvertFrom() error = %v", err)
@@ -469,8 +469,8 @@ func TestDGDR_IntermediateSpokeEditsWinOverPreservedHub(t *testing.T) {
 	}
 }
 
-func TestDGDR_IntermediateProfilingJobAnnotationWinsOverPreservedHub(t *testing.T) {
-	original := newV1beta1DGDR()
+func TestDynamoGraphDeploymentRequest_IntermediateProfilingJobAnnotationWinsOverPreservedHub(t *testing.T) {
+	original := newV1beta1DynamoGraphDeploymentRequest()
 	spoke := &DynamoGraphDeploymentRequest{}
 	if err := spoke.ConvertFrom(original); err != nil {
 		t.Fatalf("ConvertFrom() error = %v", err)
@@ -487,8 +487,8 @@ func TestDGDR_IntermediateProfilingJobAnnotationWinsOverPreservedHub(t *testing.
 	}
 }
 
-func TestDGDR_IntermediateSpokeAlphaOnlyStatusEditsSurvivePreservedHub(t *testing.T) {
-	original := newV1beta1DGDR()
+func TestDynamoGraphDeploymentRequest_IntermediateSpokeAlphaOnlyStatusEditsSurvivePreservedHub(t *testing.T) {
+	original := newV1beta1DynamoGraphDeploymentRequest()
 	spoke := &DynamoGraphDeploymentRequest{}
 	if err := spoke.ConvertFrom(original); err != nil {
 		t.Fatalf("ConvertFrom() error = %v", err)
@@ -527,8 +527,8 @@ func TestDGDR_IntermediateSpokeAlphaOnlyStatusEditsSurvivePreservedHub(t *testin
 	}
 }
 
-func TestDGDR_IntermediateSpokeAlphaOnlyEditsSurvivePreservedHub(t *testing.T) {
-	original := newV1beta1DGDR()
+func TestDynamoGraphDeploymentRequest_IntermediateSpokeAlphaOnlyEditsSurvivePreservedHub(t *testing.T) {
+	original := newV1beta1DynamoGraphDeploymentRequest()
 	spoke := &DynamoGraphDeploymentRequest{}
 	if err := spoke.ConvertFrom(original); err != nil {
 		t.Fatalf("ConvertFrom() error = %v", err)
@@ -556,8 +556,8 @@ func TestDGDR_IntermediateSpokeAlphaOnlyEditsSurvivePreservedHub(t *testing.T) {
 	}
 }
 
-func TestDGDR_IntermediateSpokeProfilingConfigModelCacheEditWins(t *testing.T) {
-	original := newV1beta1DGDR()
+func TestDynamoGraphDeploymentRequest_IntermediateSpokeProfilingConfigModelCacheEditWins(t *testing.T) {
+	original := newV1beta1DynamoGraphDeploymentRequest()
 	spoke := &DynamoGraphDeploymentRequest{}
 	if err := spoke.ConvertFrom(original); err != nil {
 		t.Fatalf("ConvertFrom() error = %v", err)
@@ -601,7 +601,7 @@ func TestDGDR_IntermediateSpokeProfilingConfigModelCacheEditWins(t *testing.T) {
 // fields are projected only when the payload is a legacy JSON object we
 // understand.
 func TestConvertTo_InvalidProfilingConfigJSON(t *testing.T) {
-	src := newV1alpha1DGDR()
+	src := newV1alpha1DynamoGraphDeploymentRequest()
 	src.Spec.ProfilingConfig.Config = &apiextensionsv1.JSON{Raw: []byte(`{not valid json`)}
 
 	dst := &v1beta1.DynamoGraphDeploymentRequest{}
@@ -622,7 +622,7 @@ func TestConvertTo_InvalidProfilingConfigJSON(t *testing.T) {
 }
 
 func TestConvertTo_EmptyProfilingConfigRawDoesNotError(t *testing.T) {
-	src := newV1alpha1DGDR()
+	src := newV1alpha1DynamoGraphDeploymentRequest()
 	src.Spec.ProfilingConfig.Config = &apiextensionsv1.JSON{Raw: []byte{}}
 
 	dst := &v1beta1.DynamoGraphDeploymentRequest{}

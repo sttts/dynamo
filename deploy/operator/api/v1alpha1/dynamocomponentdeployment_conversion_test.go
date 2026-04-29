@@ -31,7 +31,7 @@ import (
 	v1beta1 "github.com/ai-dynamo/dynamo/deploy/operator/api/v1beta1"
 )
 
-func dcdRoundTripFromV1beta1(t *testing.T, src *v1beta1.DynamoComponentDeployment) *v1beta1.DynamoComponentDeployment {
+func dynamoComponentDeploymentRoundTripFromV1beta1(t *testing.T, src *v1beta1.DynamoComponentDeployment) *v1beta1.DynamoComponentDeployment {
 	t.Helper()
 	a := &DynamoComponentDeployment{}
 	if err := a.ConvertFrom(src); err != nil {
@@ -44,7 +44,7 @@ func dcdRoundTripFromV1beta1(t *testing.T, src *v1beta1.DynamoComponentDeploymen
 	return out
 }
 
-func TestDCD_RoundTrip_Empty(t *testing.T) {
+func TestDynamoComponentDeployment_RoundTrip_Empty(t *testing.T) {
 	src := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "empty", Namespace: "ns"},
 		Spec: v1beta1.DynamoComponentDeploymentSpec{
@@ -53,13 +53,13 @@ func TestDCD_RoundTrip_Empty(t *testing.T) {
 			},
 		},
 	}
-	got := dcdRoundTripFromV1beta1(t, src)
+	got := dynamoComponentDeploymentRoundTripFromV1beta1(t, src)
 	if diff := cmp.Diff(src, got, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDCD_RoundTrip_Minimal(t *testing.T) {
+func TestDynamoComponentDeployment_RoundTrip_Minimal(t *testing.T) {
 	replicas := int32(3)
 	src := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "min", Namespace: "ns"},
@@ -72,13 +72,13 @@ func TestDCD_RoundTrip_Minimal(t *testing.T) {
 			},
 		},
 	}
-	got := dcdRoundTripFromV1beta1(t, src)
+	got := dynamoComponentDeploymentRoundTripFromV1beta1(t, src)
 	if diff := cmp.Diff(src, got, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDCD_IntermediateHubEditsWinOverPreservedSpoke(t *testing.T) {
+func TestDynamoComponentDeployment_IntermediateHubEditsWinOverPreservedSpoke(t *testing.T) {
 	src := &DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "edit", Namespace: "ns"},
 		Spec: DynamoComponentDeploymentSpec{
@@ -104,7 +104,7 @@ func TestDCD_IntermediateHubEditsWinOverPreservedSpoke(t *testing.T) {
 	}
 }
 
-func TestDCD_IntermediateHubOnlyEditsArePreservedWithSpokeSnapshot(t *testing.T) {
+func TestDynamoComponentDeployment_IntermediateHubOnlyEditsArePreservedWithSpokeSnapshot(t *testing.T) {
 	src := &DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "hub-only-edit", Namespace: "ns"},
 		Spec: DynamoComponentDeploymentSpec{
@@ -142,7 +142,7 @@ func TestDCD_IntermediateHubOnlyEditsArePreservedWithSpokeSnapshot(t *testing.T)
 	}
 }
 
-func TestDCD_IntermediateSpokeAlphaOnlyEditsSurvivePreservedHub(t *testing.T) {
+func TestDynamoComponentDeployment_IntermediateSpokeAlphaOnlyEditsSurvivePreservedHub(t *testing.T) {
 	original := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "alpha-only-edit", Namespace: "ns"},
 		Spec: v1beta1.DynamoComponentDeploymentSpec{
@@ -172,7 +172,7 @@ func TestDCD_IntermediateSpokeAlphaOnlyEditsSurvivePreservedHub(t *testing.T) {
 	}
 }
 
-func TestDCD_IntermediateSpokeExtraPodSpecEditsSurvivePreservedHub(t *testing.T) {
+func TestDynamoComponentDeployment_IntermediateSpokeExtraPodSpecEditsSurvivePreservedHub(t *testing.T) {
 	original := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "extra-pod-spec-edit", Namespace: "ns"},
 		Spec: v1beta1.DynamoComponentDeploymentSpec{
@@ -207,7 +207,7 @@ func TestDCD_IntermediateSpokeExtraPodSpecEditsSurvivePreservedHub(t *testing.T)
 	}
 }
 
-func TestDCD_IntermediateHubSharedMemorySizeEditWinsOverPreservedOrigin(t *testing.T) {
+func TestDynamoComponentDeployment_IntermediateHubSharedMemorySizeEditWinsOverPreservedOrigin(t *testing.T) {
 	src := &DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "shared-memory-edit", Namespace: "ns"},
 		Spec: DynamoComponentDeploymentSpec{
@@ -242,7 +242,7 @@ func TestDCD_IntermediateHubSharedMemorySizeEditWinsOverPreservedOrigin(t *testi
 	}
 }
 
-func TestDCD_RoundTrip_PodTemplate(t *testing.T) {
+func TestDynamoComponentDeployment_RoundTrip_PodTemplate(t *testing.T) {
 	src := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "pt", Namespace: "ns"},
 		Spec: v1beta1.DynamoComponentDeploymentSpec{
@@ -273,13 +273,13 @@ func TestDCD_RoundTrip_PodTemplate(t *testing.T) {
 			},
 		},
 	}
-	got := dcdRoundTripFromV1beta1(t, src)
+	got := dynamoComponentDeploymentRoundTripFromV1beta1(t, src)
 	if diff := cmp.Diff(src, got, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDCD_HubSnapshotIsBaseAndV1alpha1OverlayWins(t *testing.T) {
+func TestDynamoComponentDeployment_HubSnapshotIsBaseAndV1alpha1OverlayWins(t *testing.T) {
 	src := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "pt-overlay", Namespace: "ns"},
 		Spec: v1beta1.DynamoComponentDeploymentSpec{
@@ -320,7 +320,7 @@ func TestDCD_HubSnapshotIsBaseAndV1alpha1OverlayWins(t *testing.T) {
 	}
 }
 
-func TestDCD_RoundTrip_Experimental(t *testing.T) {
+func TestDynamoComponentDeployment_RoundTrip_Experimental(t *testing.T) {
 	src := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "exp", Namespace: "ns"},
 		Spec: v1beta1.DynamoComponentDeploymentSpec{
@@ -336,13 +336,13 @@ func TestDCD_RoundTrip_Experimental(t *testing.T) {
 			},
 		},
 	}
-	got := dcdRoundTripFromV1beta1(t, src)
+	got := dynamoComponentDeploymentRoundTripFromV1beta1(t, src)
 	if diff := cmp.Diff(src, got, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
 
-func TestDCD_ExperimentalModeValuesAreValidForIntermediateVersion(t *testing.T) {
+func TestDynamoComponentDeployment_ExperimentalModeValuesAreValidForIntermediateVersion(t *testing.T) {
 	alpha := &DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "alpha-enums", Namespace: "ns"},
 		Spec: DynamoComponentDeploymentSpec{
@@ -417,9 +417,9 @@ func TestDCD_ExperimentalModeValuesAreValidForIntermediateVersion(t *testing.T) 
 // Expanded DCD coverage: status, v1alpha1-only shapes, scrubbing, JSON bytes.
 // -----------------------------------------------------------------------------
 
-// TestDCD_RoundTrip_Status exercises the DCD status fields (conditions and
+// TestDynamoComponentDeployment_RoundTrip_Status exercises the DCD status fields (conditions and
 // single-service replica status).
-func TestDCD_RoundTrip_Status(t *testing.T) {
+func TestDynamoComponentDeployment_RoundTrip_Status(t *testing.T) {
 	src := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "status", Namespace: "ns"},
 		Spec: v1beta1.DynamoComponentDeploymentSpec{
@@ -441,19 +441,19 @@ func TestDCD_RoundTrip_Status(t *testing.T) {
 			},
 		},
 	}
-	got := dcdRoundTripFromV1beta1(t, src)
+	got := dynamoComponentDeploymentRoundTripFromV1beta1(t, src)
 	if diff := cmp.Diff(src, got, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
 
-// TestDCD_FromV1alpha1_AnnotationPreservedFields exercises the v1alpha1-only
+// TestDynamoComponentDeployment_FromV1alpha1_AnnotationPreservedFields exercises the v1alpha1-only
 // fields that are preserved verbatim via origin annotations on the DCD carrier
 // (prefix "nvidia.com/dcd-"). Fields that flow through podTemplate
 // decomposition (EnvFromSecret, Resources, VolumeMounts, Probes) are not
 // bitwise round-trippable v1alpha1-first and are exercised via the
 // v1beta1-first round-trip instead.
-func TestDCD_FromV1alpha1_AnnotationPreservedFields(t *testing.T) {
+func TestDynamoComponentDeployment_FromV1alpha1_AnnotationPreservedFields(t *testing.T) {
 	dynNs := "legacy-dyn-ns"
 	src := &DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "full", Namespace: "ns"},
@@ -514,12 +514,12 @@ func TestDCD_FromV1alpha1_AnnotationPreservedFields(t *testing.T) {
 	}
 }
 
-// TestDCD_ConvertFrom_ScrubsLingeringAnnotations pins the consume-then-scrub
+// TestDynamoComponentDeployment_ConvertFrom_ScrubsLingeringAnnotations pins the consume-then-scrub
 // contract of ConvertFrom: known-suffix "nvidia.com/dcd-*" origin annotations
 // are consumed (applied to the resulting v1alpha1 fields and then removed),
 // unknown "nvidia.com/dcd-*" annotations are scrubbed, and unrelated user
 // annotations are preserved verbatim.
-func TestDCD_ConvertFrom_ScrubsLingeringAnnotations(t *testing.T) {
+func TestDynamoComponentDeployment_ConvertFrom_ScrubsLingeringAnnotations(t *testing.T) {
 	src := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "scrub",
@@ -561,7 +561,7 @@ func TestDCD_ConvertFrom_ScrubsLingeringAnnotations(t *testing.T) {
 	}
 }
 
-func TestDCD_ConvertFrom_DoesNotTagHubOriginWhenInternalAnnotationsExist(t *testing.T) {
+func TestDynamoComponentDeployment_ConvertFrom_DoesNotTagHubOriginWhenInternalAnnotationsExist(t *testing.T) {
 	src := &v1beta1.DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "internal-annotation",
@@ -585,7 +585,7 @@ func TestDCD_ConvertFrom_DoesNotTagHubOriginWhenInternalAnnotationsExist(t *test
 	}
 }
 
-func TestDCD_FromV1alpha1_PodTemplateDedicatedFields(t *testing.T) {
+func TestDynamoComponentDeployment_FromV1alpha1_PodTemplateDedicatedFields(t *testing.T) {
 	src := &DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "pod-dedicated", Namespace: "ns"},
 		Spec: DynamoComponentDeploymentSpec{
@@ -616,7 +616,7 @@ func TestDCD_FromV1alpha1_PodTemplateDedicatedFields(t *testing.T) {
 	}
 }
 
-func TestDCD_FromV1alpha1_EmptyExtraPodSpecDoesNotMaterializePodTemplate(t *testing.T) {
+func TestDynamoComponentDeployment_FromV1alpha1_EmptyExtraPodSpecDoesNotMaterializePodTemplate(t *testing.T) {
 	src := &DynamoComponentDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "empty-extra", Namespace: "ns"},
 		Spec: DynamoComponentDeploymentSpec{
@@ -644,12 +644,12 @@ func TestDCD_FromV1alpha1_EmptyExtraPodSpecDoesNotMaterializePodTemplate(t *test
 	}
 }
 
-// TestDCD_JSONRoundTrip_Bytes asserts byte-identical JSON representation
+// TestDynamoComponentDeployment_JSONRoundTrip_Bytes asserts byte-identical JSON representation
 // across a v1beta1 -> v1alpha1 -> v1beta1 round-trip. The PodTemplate carries
 // an empty PodTemplateSpec.ObjectMeta and a Container with empty Resources so
 // the v1beta1 MarshalJSON normalizer (which strips zero-value
 // podTemplate.metadata{} and containers[*].resources{}) is exercised.
-func TestDCD_JSONRoundTrip_Bytes(t *testing.T) {
+func TestDynamoComponentDeployment_JSONRoundTrip_Bytes(t *testing.T) {
 	shm := resource.MustParse("4Gi")
 	replicas := int32(2)
 	src := &v1beta1.DynamoComponentDeployment{
@@ -676,7 +676,7 @@ func TestDCD_JSONRoundTrip_Bytes(t *testing.T) {
 			},
 		},
 	}
-	got := dcdRoundTripFromV1beta1(t, src)
+	got := dynamoComponentDeploymentRoundTripFromV1beta1(t, src)
 
 	wantBytes, err := json.Marshal(src)
 	if err != nil {

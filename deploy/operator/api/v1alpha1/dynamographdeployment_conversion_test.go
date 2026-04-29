@@ -72,7 +72,7 @@ func roundTripFromV1alpha1(t *testing.T, src *DynamoGraphDeployment) *DynamoGrap
 	return out
 }
 
-func TestDGD_RoundTrip_Empty(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_Empty(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "empty", Namespace: "ns"},
 	}
@@ -82,7 +82,7 @@ func TestDGD_RoundTrip_Empty(t *testing.T) {
 	}
 }
 
-func TestDGD_RoundTrip_Minimal(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_Minimal(t *testing.T) {
 	replicas := int32(2)
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "min", Namespace: "ns"},
@@ -102,7 +102,7 @@ func TestDGD_RoundTrip_Minimal(t *testing.T) {
 	}
 }
 
-func TestDGD_IntermediateHubEditsWinOverPreservedSpoke(t *testing.T) {
+func TestDynamoGraphDeployment_IntermediateHubEditsWinOverPreservedSpoke(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "edit", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -130,7 +130,7 @@ func TestDGD_IntermediateHubEditsWinOverPreservedSpoke(t *testing.T) {
 	}
 }
 
-func TestDGD_IntermediateHubOnlyEditsArePreservedWithSpokeSnapshot(t *testing.T) {
+func TestDynamoGraphDeployment_IntermediateHubOnlyEditsArePreservedWithSpokeSnapshot(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "hub-only-edit", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -170,7 +170,7 @@ func TestDGD_IntermediateHubOnlyEditsArePreservedWithSpokeSnapshot(t *testing.T)
 	}
 }
 
-func TestDGD_IntermediateSpokeAlphaOnlyEditsSurvivePreservedHub(t *testing.T) {
+func TestDynamoGraphDeployment_IntermediateSpokeAlphaOnlyEditsSurvivePreservedHub(t *testing.T) {
 	original := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "alpha-only-edit", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -212,7 +212,7 @@ func TestDGD_IntermediateSpokeAlphaOnlyEditsSurvivePreservedHub(t *testing.T) {
 	}
 }
 
-func TestDGD_IntermediateHubStatusComponentNamesWinOverPreservedSpoke(t *testing.T) {
+func TestDynamoGraphDeployment_IntermediateHubStatusComponentNamesWinOverPreservedSpoke(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "status-edit", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -250,7 +250,7 @@ func TestDGD_IntermediateHubStatusComponentNamesWinOverPreservedSpoke(t *testing
 	}
 }
 
-func TestDGD_RoundTrip_SpecLevelFields(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_SpecLevelFields(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "spec", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -279,7 +279,7 @@ func TestDGD_RoundTrip_SpecLevelFields(t *testing.T) {
 	}
 }
 
-func TestDGD_HubSnapshotIsBaseAndV1alpha1OverlayWins(t *testing.T) {
+func TestDynamoGraphDeployment_HubSnapshotIsBaseAndV1alpha1OverlayWins(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "overlay", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -322,7 +322,7 @@ func TestDGD_HubSnapshotIsBaseAndV1alpha1OverlayWins(t *testing.T) {
 	}
 }
 
-func TestDGD_RoundTrip_MultipleServicesOrderStable(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_MultipleServicesOrderStable(t *testing.T) {
 	// Services in alphabetical order match what ConvertTo emits from the map.
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "multi", Namespace: "ns"},
@@ -340,7 +340,7 @@ func TestDGD_RoundTrip_MultipleServicesOrderStable(t *testing.T) {
 	}
 }
 
-func TestDGD_RoundTrip_Experimental(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_Experimental(t *testing.T) {
 	ref := "my-checkpoint"
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "exp", Namespace: "ns"},
@@ -372,7 +372,7 @@ func TestDGD_RoundTrip_Experimental(t *testing.T) {
 	}
 }
 
-func TestDGD_RoundTrip_PodTemplate(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_PodTemplate(t *testing.T) {
 	shm := resource.MustParse("4Gi")
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "pt", Namespace: "ns"},
@@ -420,7 +420,7 @@ func TestDGD_RoundTrip_PodTemplate(t *testing.T) {
 	}
 }
 
-func TestDGD_RoundTrip_CompilationCache(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_CompilationCache(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "cc", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -453,7 +453,7 @@ func TestDGD_RoundTrip_CompilationCache(t *testing.T) {
 	}
 }
 
-func TestDGD_RoundTrip_ScalingAdapter(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_ScalingAdapter(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "sa", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -471,9 +471,9 @@ func TestDGD_RoundTrip_ScalingAdapter(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_PVCsPreserved verifies that legacy v1alpha1 PVCs survive
+// TestDynamoGraphDeployment_FromV1alpha1_PVCsPreserved verifies that legacy v1alpha1 PVCs survive
 // a v1alpha1 -> v1beta1 -> v1alpha1 round-trip via the origin annotation.
-func TestDGD_FromV1alpha1_PVCsPreserved(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_PVCsPreserved(t *testing.T) {
 	createTrue := true
 	name := "model-pvc"
 	src := &DynamoGraphDeployment{
@@ -496,10 +496,10 @@ func TestDGD_FromV1alpha1_PVCsPreserved(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_DisabledExperimental verifies that v1alpha1
+// TestDynamoGraphDeployment_FromV1alpha1_DisabledExperimental verifies that v1alpha1
 // GMS/Failover/Checkpoint with Enabled=false and payloads survive the
 // round-trip via origin annotations.
-func TestDGD_FromV1alpha1_DisabledExperimental(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_DisabledExperimental(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "disabled", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -526,9 +526,9 @@ func TestDGD_FromV1alpha1_DisabledExperimental(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_SubComponentType verifies that a v1alpha1-only
+// TestDynamoGraphDeployment_FromV1alpha1_SubComponentType verifies that a v1alpha1-only
 // subComponentType string survives via origin annotation.
-func TestDGD_FromV1alpha1_SubComponentType(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_SubComponentType(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "sub", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -551,10 +551,10 @@ func TestDGD_FromV1alpha1_SubComponentType(t *testing.T) {
 // v1alpha1-only shapes, annotation hygiene, JSON byte-identity.
 // -----------------------------------------------------------------------------
 
-// TestDGD_RoundTrip_Status exercises every populated Status sub-struct so that
+// TestDynamoGraphDeployment_RoundTrip_Status exercises every populated Status sub-struct so that
 // the ConvertTo / ConvertFrom status paths are covered (conditions, services
 // map, restart, checkpoints, rollingUpdate).
-func TestDGD_RoundTrip_Status(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_Status(t *testing.T) {
 	now := metav1.NewTime(metav1.Now().Rfc3339Copy().Time)
 	later := metav1.NewTime(now.Time.Add(60 * time.Second))
 	src := &v1beta1.DynamoGraphDeployment{
@@ -607,11 +607,11 @@ func TestDGD_RoundTrip_Status(t *testing.T) {
 	}
 }
 
-// TestDGD_RoundTrip_FullSharedSpec covers every first-class v1beta1 shared-spec
+// TestDynamoGraphDeployment_RoundTrip_FullSharedSpec covers every first-class v1beta1 shared-spec
 // field that has not been exercised elsewhere (DynamoNamespace is v1alpha1-only
 // so it lives in a separate test): GlobalDynamoNamespace, Multinode, ModelRef,
 // per-service TopologyConstraint, EPPConfig.
-func TestDGD_RoundTrip_FullSharedSpec(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_FullSharedSpec(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "full", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -646,10 +646,10 @@ func TestDGD_RoundTrip_FullSharedSpec(t *testing.T) {
 	}
 }
 
-// TestDGD_RoundTrip_PodTemplateProbesAndEnvFrom covers the main-container
-// fields that decomposePodTemplate preserves through ExtraPodSpec.MainContainer:
+// TestDynamoGraphDeployment_RoundTrip_PodTemplateProbesAndEnvFrom covers the main-container
+// fields that decomposePodTemplateSpec preserves through ExtraPodSpec.MainContainer:
 // EnvFrom, LivenessProbe, ReadinessProbe, StartupProbe.
-func TestDGD_RoundTrip_PodTemplateProbesAndEnvFrom(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_PodTemplateProbesAndEnvFrom(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "probes", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -700,10 +700,10 @@ func TestDGD_RoundTrip_PodTemplateProbesAndEnvFrom(t *testing.T) {
 	}
 }
 
-// TestDGD_RoundTrip_PodSpecExtras covers the non-main-container PodSpec fields
+// TestDynamoGraphDeployment_RoundTrip_PodSpecExtras covers the non-main-container PodSpec fields
 // that flow through ExtraPodSpec.PodSpec: NodeSelector, Tolerations,
 // ServiceAccountName, ImagePullSecrets, Volumes.
-func TestDGD_RoundTrip_PodSpecExtras(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_PodSpecExtras(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "extras", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -741,9 +741,9 @@ func TestDGD_RoundTrip_PodSpecExtras(t *testing.T) {
 	}
 }
 
-// TestDGD_RoundTrip_FrontendSidecar starts from v1beta1 (hub) with the
+// TestDynamoGraphDeployment_RoundTrip_FrontendSidecar starts from v1beta1 (hub) with the
 // FrontendSidecar string naming a sidecar container in podTemplate.containers.
-func TestDGD_RoundTrip_FrontendSidecar(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_FrontendSidecar(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "fs", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -773,9 +773,9 @@ func TestDGD_RoundTrip_FrontendSidecar(t *testing.T) {
 	}
 }
 
-// TestDGD_RoundTrip_SharedMemoryDisabledZero asserts that an explicit
+// TestDynamoGraphDeployment_RoundTrip_SharedMemoryDisabledZero asserts that an explicit
 // size="0" (Disabled=true equivalent) survives. Starts from v1beta1.
-func TestDGD_RoundTrip_SharedMemoryDisabledZero(t *testing.T) {
+func TestDynamoGraphDeployment_RoundTrip_SharedMemoryDisabledZero(t *testing.T) {
 	zero := resource.MustParse("0")
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "shm", Namespace: "ns"},
@@ -794,10 +794,10 @@ func TestDGD_RoundTrip_SharedMemoryDisabledZero(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_SharedMemoryEdgeCases covers the two v1alpha1-only
+// TestDynamoGraphDeployment_FromV1alpha1_SharedMemoryEdgeCases covers the two v1alpha1-only
 // SharedMemorySpec shapes that need origin annotations to round-trip:
 // Disabled=true and the empty struct &SharedMemorySpec{}.
-func TestDGD_FromV1alpha1_SharedMemoryEdgeCases(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_SharedMemoryEdgeCases(t *testing.T) {
 	cases := []struct {
 		name string
 		shm  *SharedMemorySpec
@@ -826,10 +826,10 @@ func TestDGD_FromV1alpha1_SharedMemoryEdgeCases(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_ScalingAdapterDisabled checks that the otherwise-unreachable
+// TestDynamoGraphDeployment_FromV1alpha1_ScalingAdapterDisabled checks that the otherwise-unreachable
 // &ScalingAdapter{Enabled:false} shape round-trips via the scaling-adapter-disabled
 // annotation.
-func TestDGD_FromV1alpha1_ScalingAdapterDisabled(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_ScalingAdapterDisabled(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "sad", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -847,9 +847,9 @@ func TestDGD_FromV1alpha1_ScalingAdapterDisabled(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_CheckpointDisabled checks that Checkpoint{Enabled:false}
+// TestDynamoGraphDeployment_FromV1alpha1_CheckpointDisabled checks that Checkpoint{Enabled:false}
 // with a non-trivial payload survives via annotation.
-func TestDGD_FromV1alpha1_CheckpointDisabled(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_CheckpointDisabled(t *testing.T) {
 	ref := "my-ckpt"
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "ckpt-disabled", Namespace: "ns"},
@@ -872,9 +872,9 @@ func TestDGD_FromV1alpha1_CheckpointDisabled(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_DynamoNamespaceAndServiceName verifies the two simple
+// TestDynamoGraphDeployment_FromV1alpha1_DynamoNamespaceAndServiceName verifies the two simple
 // v1alpha1-only string fields round-trip via annotations.
-func TestDGD_FromV1alpha1_DynamoNamespaceAndServiceName(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_DynamoNamespaceAndServiceName(t *testing.T) {
 	ns := "legacy-dyn-ns"
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "legacy", Namespace: "ns"},
@@ -894,11 +894,11 @@ func TestDGD_FromV1alpha1_DynamoNamespaceAndServiceName(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_PerServiceAnnotationsAndLabels verifies that v1alpha1
+// TestDynamoGraphDeployment_FromV1alpha1_PerServiceAnnotationsAndLabels verifies that v1alpha1
 // per-service Annotations/Labels (which target Pod+Service+Ingress in the
 // v1alpha1 reconcile model and cannot be faithfully placed in
 // podTemplate.metadata alone) are preserved via origin annotations.
-func TestDGD_FromV1alpha1_PerServiceAnnotationsAndLabels(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_PerServiceAnnotationsAndLabels(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "pa", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -917,8 +917,8 @@ func TestDGD_FromV1alpha1_PerServiceAnnotationsAndLabels(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_AutoscalingAndIngress covers both deprecated blocks.
-func TestDGD_FromV1alpha1_AutoscalingAndIngress(t *testing.T) {
+// TestDynamoGraphDeployment_FromV1alpha1_AutoscalingAndIngress covers both deprecated blocks.
+func TestDynamoGraphDeployment_FromV1alpha1_AutoscalingAndIngress(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "ai", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -944,13 +944,13 @@ func TestDGD_FromV1alpha1_AutoscalingAndIngress(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_Resources_ForwardOnly asserts that a v1alpha1 Resources
+// TestDynamoGraphDeployment_FromV1alpha1_Resources_ForwardOnly asserts that a v1alpha1 Resources
 // struct with a non-default GPUType and Custom keys translates into the
 // expected corev1.ResourceList on the v1beta1 side. Full bitwise round-trip
 // isn't promised for this shape (v1beta1 -> v1alpha1 folds Resources into
 // ExtraPodSpec.MainContainer), but the forward translation is exercised here
 // to cover resourcesToNative's GPUType/Custom branches.
-func TestDGD_FromV1alpha1_Resources_ForwardOnly(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_Resources_ForwardOnly(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "res", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -993,11 +993,11 @@ func TestDGD_FromV1alpha1_Resources_ForwardOnly(t *testing.T) {
 	}
 }
 
-// TestDGD_ConvertFrom_ScrubsLingeringAnnotations asserts that a stale
+// TestDynamoGraphDeployment_ConvertFrom_ScrubsLingeringAnnotations asserts that a stale
 // "nvidia.com/dgd-comp-*" annotation that does not correspond to any current
 // component is dropped by ConvertFrom. This protects users from leaking
 // origin annotations across deletions.
-func TestDGD_ConvertFrom_ScrubsLingeringAnnotations(t *testing.T) {
+func TestDynamoGraphDeployment_ConvertFrom_ScrubsLingeringAnnotations(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "scrub",
@@ -1020,14 +1020,14 @@ func TestDGD_ConvertFrom_ScrubsLingeringAnnotations(t *testing.T) {
 	}
 }
 
-// TestDGD_ConvertFrom_DuplicateComponentNames asserts that ConvertFrom
+// TestDynamoGraphDeployment_ConvertFrom_DuplicateComponentNames asserts that ConvertFrom
 // returns an error when the v1beta1 spec.components list has two entries
 // with the same componentName, instead of silently overwriting the earlier
 // entry on map insertion. The CRD's +listType=map +listMapKey=componentName
 // already enforces uniqueness at the API server, but the conversion path is
 // also reachable from in-memory unit tests and other code paths that bypass
 // CRD validation, so the conversion code defends in depth.
-func TestDGD_ConvertFrom_DuplicateComponentNames(t *testing.T) {
+func TestDynamoGraphDeployment_ConvertFrom_DuplicateComponentNames(t *testing.T) {
 	src := &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "dup", Namespace: "ns"},
 		Spec: v1beta1.DynamoGraphDeploymentSpec{
@@ -1047,14 +1047,14 @@ func TestDGD_ConvertFrom_DuplicateComponentNames(t *testing.T) {
 	}
 }
 
-// TestScrubStaleDGDAnnotations_HyphenatedNames directly exercises
-// scrubStaleDGDAnnotations on cases where either the component name or the
+// TestScrubStaleDynamoGraphDeploymentAnnotations_HyphenatedNames directly exercises
+// scrubStaleDynamoGraphDeploymentAnnotations on cases where either the component name or the
 // origin suffix (or both) contain "-". This is a regression test for a
 // previous bug where the function split the key on the first "-" after the
 // "nvidia.com/dgd-comp-" prefix and used the leading segment as the
 // component name; that approach silently dropped origin annotations for
 // hyphenated active components such as "aa-frontend" or "bb-worker".
-func TestScrubStaleDGDAnnotations_HyphenatedNames(t *testing.T) {
+func TestScrubStaleDynamoGraphDeploymentAnnotations_HyphenatedNames(t *testing.T) {
 	type tc struct {
 		name       string
 		components map[string]*DynamoComponentDeploymentSharedSpec
@@ -1125,7 +1125,7 @@ func TestScrubStaleDGDAnnotations_HyphenatedNames(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			obj := &metav1.ObjectMeta{Annotations: maps.Clone(c.anns)}
-			scrubStaleDGDAnnotations(obj, c.components)
+			scrubStaleDynamoGraphDeploymentAnnotations(obj, c.components)
 			for _, k := range c.wantKept {
 				if _, ok := obj.Annotations[k]; !ok {
 					t.Errorf("expected %q to be kept; got annotations: %v", k, obj.Annotations)
@@ -1140,11 +1140,11 @@ func TestScrubStaleDGDAnnotations_HyphenatedNames(t *testing.T) {
 	}
 }
 
-// TestDGD_JSONRoundTrip_Bytes is the strongest form of syntactic equality:
+// TestDynamoGraphDeployment_JSONRoundTrip_Bytes is the strongest form of syntactic equality:
 // marshal the v1beta1 input to JSON, round-trip through v1alpha1, marshal the
 // result, and require byte-identical output. This catches any nil-vs-empty
 // divergence that cmp.Diff+EquateEmpty would collapse.
-func TestDGD_JSONRoundTrip_Bytes(t *testing.T) {
+func TestDynamoGraphDeployment_JSONRoundTrip_Bytes(t *testing.T) {
 	shm := resource.MustParse("4Gi")
 	replicas := int32(2)
 	src := &v1beta1.DynamoGraphDeployment{
@@ -1191,13 +1191,13 @@ func intstrFromInt32(v int32) intstr.IntOrString {
 	return intstr.FromInt32(v)
 }
 
-// TestDGD_FromV1alpha1_FrontendSidecarFullRoundTrip exercises the v1alpha1-first
+// TestDynamoGraphDeployment_FromV1alpha1_FrontendSidecarFullRoundTrip exercises the v1alpha1-first
 // FrontendSidecar path: the full FrontendSidecarSpec is stashed under the
 // suffixFrontendSidecar origin annotation on ConvertTo (covers
-// buildPodTemplateTo's "full spec -> name reference" branch) and restored from
-// that annotation on ConvertFrom (covers decomposePodTemplate's
+// buildPodTemplateSpecTo's "full spec -> name reference" branch) and restored from
+// that annotation on ConvertFrom (covers decomposePodTemplateSpec's
 // "annotation present -> unmarshal + drop container from other" branch).
-func TestDGD_FromV1alpha1_FrontendSidecarFullRoundTrip(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_FrontendSidecarFullRoundTrip(t *testing.T) {
 	secret := "frontend-secret"
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "fs-full", Namespace: "ns"},
@@ -1262,12 +1262,12 @@ func TestDGD_FromV1alpha1_FrontendSidecarFullRoundTrip(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_GMSEnabledFalseEmptyPayload targets the
+// TestDynamoGraphDeployment_FromV1alpha1_GMSEnabledFalseEmptyPayload targets the
 // "Enabled=false with zero-valued payload -> `{}` annotation" branch in
 // convertExperimentalTo for GPUMemoryService. The v1alpha1 pointer
 // &GPUMemoryServiceSpec{} (no Mode, no DeviceClassName) must round-trip
 // through the annotation without being collapsed to nil.
-func TestDGD_FromV1alpha1_GMSEnabledFalseEmptyPayload(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_GMSEnabledFalseEmptyPayload(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "gms-empty", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -1294,9 +1294,9 @@ func TestDGD_FromV1alpha1_GMSEnabledFalseEmptyPayload(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_FailoverEnabledFalseEmptyPayload targets the
+// TestDynamoGraphDeployment_FromV1alpha1_FailoverEnabledFalseEmptyPayload targets the
 // sibling branch for Failover.
-func TestDGD_FromV1alpha1_FailoverEnabledFalseEmptyPayload(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_FailoverEnabledFalseEmptyPayload(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "fo-empty", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -1323,10 +1323,10 @@ func TestDGD_FromV1alpha1_FailoverEnabledFalseEmptyPayload(t *testing.T) {
 	}
 }
 
-// TestDGD_FromV1alpha1_CheckpointEnabledFalseEmptyPayload covers the same
+// TestDynamoGraphDeployment_FromV1alpha1_CheckpointEnabledFalseEmptyPayload covers the same
 // "Enabled=false with zero-valued payload -> `{}` annotation" branch for the
 // Checkpoint sibling in convertExperimentalTo.
-func TestDGD_FromV1alpha1_CheckpointEnabledFalseEmptyPayload(t *testing.T) {
+func TestDynamoGraphDeployment_FromV1alpha1_CheckpointEnabledFalseEmptyPayload(t *testing.T) {
 	src := &DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "ckpt-empty", Namespace: "ns"},
 		Spec: DynamoGraphDeploymentSpec{
@@ -1353,14 +1353,14 @@ func TestDGD_FromV1alpha1_CheckpointEnabledFalseEmptyPayload(t *testing.T) {
 	}
 }
 
-// newIdempotenceDGDFixture returns a representative v1beta1 DGD covering the
+// newIdempotenceDynamoGraphDeploymentFixture returns a representative v1beta1 DGD covering the
 // shape that originally surfaced the generation-bump regression in-cluster:
 // an aggregated frontend+worker service pair where the frontend has no
 // explicit container resources (so `containers[*].resources` projects as an
 // empty object) and `sharedMemorySize="0"` (which exercises the Disabled=true
 // path in convertSharedMemoryFrom). It is shared by the idempotence tests
 // below so the linter does not flag the identical fixture builders as dupl.
-func newIdempotenceDGDFixture() *v1beta1.DynamoGraphDeployment {
+func newIdempotenceDynamoGraphDeploymentFixture() *v1beta1.DynamoGraphDeployment {
 	replicas := int32(1)
 	return &v1beta1.DynamoGraphDeployment{
 		ObjectMeta: metav1.ObjectMeta{Name: "conv-smoke", Namespace: "jsm"},
@@ -1403,7 +1403,7 @@ func newIdempotenceDGDFixture() *v1beta1.DynamoGraphDeployment {
 	}
 }
 
-// TestDGD_ApplyIdempotence_GenerationBump simulates the server-side flow that
+// TestDynamoGraphDeployment_ApplyIdempotence_GenerationBump simulates the server-side flow that
 // kubectl apply drives on every invocation: the v1beta1 payload is converted
 // to v1alpha1 for storage, stored (i.e. JSON-marshaled and unmarshaled), and
 // then a second apply of the same v1beta1 payload runs ConvertFrom again.
@@ -1417,11 +1417,11 @@ func newIdempotenceDGDFixture() *v1beta1.DynamoGraphDeployment {
 // the user-visible bytes are identical. This test pins the invariant that
 // ConvertFrom's output must be reflect.DeepEqual-stable across an etcd JSON
 // round-trip, so kubectl apply is idempotent for any v1beta1 input.
-func TestDGD_ApplyIdempotence_GenerationBump(t *testing.T) {
+func TestDynamoGraphDeployment_ApplyIdempotence_GenerationBump(t *testing.T) {
 	// sharedMemorySize=\"0\" is the critical trigger: it exercises the
 	// Disabled=true path in convertSharedMemoryFrom, which previously left
 	// SharedMemorySpec.Size as a bare Quantity{}.
-	newSrc := newIdempotenceDGDFixture
+	newSrc := newIdempotenceDynamoGraphDeploymentFixture
 
 	// First apply: simulates the initial create path.
 	stored := &DynamoGraphDeployment{}
@@ -1458,7 +1458,7 @@ func TestDGD_ApplyIdempotence_GenerationBump(t *testing.T) {
 	}
 }
 
-// TestDGD_ApplyIdempotence_EmptySharedMemoryOrigin pins the twin invariant for
+// TestDynamoGraphDeployment_ApplyIdempotence_EmptySharedMemoryOrigin pins the twin invariant for
 // the `&SharedMemorySpec{}` -> v1beta1 empty-origin annotation path. The empty
 // struct has `Size: resource.Quantity{}` which serializes to "0" (Quantity is
 // a non-pointer struct, so encoding/json's omitempty does not drop it); after
@@ -1466,7 +1466,7 @@ func TestDGD_ApplyIdempotence_GenerationBump(t *testing.T) {
 // not reflect.DeepEqual to the Go zero value. Without the fix in
 // convertSharedMemoryFrom, every reapply of a v1beta1 object carrying the
 // empty-origin annotation would bump .metadata.generation.
-func TestDGD_ApplyIdempotence_EmptySharedMemoryOrigin(t *testing.T) {
+func TestDynamoGraphDeployment_ApplyIdempotence_EmptySharedMemoryOrigin(t *testing.T) {
 	// Seed a v1alpha1 object whose only non-default bit is SharedMemory =
 	// &SharedMemorySpec{}, then run it through ConvertTo once so the
 	// produced v1beta1 carries the "shared-memory-origin=empty" annotation
@@ -1521,7 +1521,7 @@ func TestDGD_ApplyIdempotence_EmptySharedMemoryOrigin(t *testing.T) {
 	}
 }
 
-// TestDGD_ApplyIdempotence_CSAMergePatch reproduces the *exact* kubectl
+// TestDynamoGraphDeployment_ApplyIdempotence_CSAMergePatch reproduces the *exact* kubectl
 // client-side-apply flow the API server drives on every `kubectl apply`
 // against the v1beta1 endpoint. The JSON merge patch step is what strips
 // `podTemplate.metadata: {}` and `containers[*].resources: {}` from the
@@ -1538,8 +1538,8 @@ func TestDGD_ApplyIdempotence_EmptySharedMemoryOrigin(t *testing.T) {
 // worker) service pair with no explicit `podTemplate.metadata` or container
 // resources on the frontend container -- the shape that originally surfaced
 // the generation-bump regression in-cluster.
-func TestDGD_ApplyIdempotence_CSAMergePatch(t *testing.T) {
-	userB1 := newIdempotenceDGDFixture
+func TestDynamoGraphDeployment_ApplyIdempotence_CSAMergePatch(t *testing.T) {
+	userB1 := newIdempotenceDynamoGraphDeploymentFixture
 
 	// This is the literal patch body kubectl client-side-apply sends for
 	// the fixture above, captured with `kubectl apply -v=9` at the v1beta1

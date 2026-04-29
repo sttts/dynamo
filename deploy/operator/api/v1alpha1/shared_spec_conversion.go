@@ -62,7 +62,7 @@ const (
 	mainContainerName = "main"
 
 	// defaultFrontendSidecarContainerName is the v1alpha1 default container
-	// name synthesised by buildPodTemplateTo when a v1alpha1 FrontendSidecarSpec
+	// name synthesised by buildPodTemplateSpecTo when a v1alpha1 FrontendSidecarSpec
 	// is converted into a podTemplate sidecar + FrontendSidecar name reference.
 	defaultFrontendSidecarContainerName = "sidecar-frontend"
 
@@ -123,15 +123,15 @@ type annCarrier struct {
 	prefix string
 }
 
-// newDGDComponentCarrier returns a carrier scoped to a named component on the
+// newDynamoGraphDeploymentComponentCarrier returns a carrier scoped to a named component on the
 // DGD object: keys are of the form "nvidia.com/dgd-comp-<name>-<suffix>".
-func newDGDComponentCarrier(obj metav1.Object, componentName string) *annCarrier {
+func newDynamoGraphDeploymentComponentCarrier(obj metav1.Object, componentName string) *annCarrier {
 	return &annCarrier{obj: obj, prefix: annDGDCompPrefix + componentName + "-"}
 }
 
-// newDCDCarrier returns a carrier scoped to a standalone DCD: keys are of the
+// newDynamoComponentDeploymentCarrier returns a carrier scoped to a standalone DCD: keys are of the
 // form "nvidia.com/dcd-<suffix>".
-func newDCDCarrier(obj metav1.Object) *annCarrier {
+func newDynamoComponentDeploymentCarrier(obj metav1.Object) *annCarrier {
 	return &annCarrier{obj: obj, prefix: annDCDPrefix}
 }
 
@@ -224,10 +224,10 @@ func scrubAnnotationsByPrefix(obj metav1.Object, prefix string) {
 // Shared-spec conversion entry points
 // ---------------------------------------------------------------------------
 
-// convertSharedSpecTo converts a v1alpha1 DynamoComponentDeploymentSharedSpec
+// convertDynamoComponentDeploymentSharedSpecTo converts a v1alpha1 DynamoComponentDeploymentSharedSpec
 // into its v1beta1 counterpart. Lossy-direction fields are preserved on the
 // carrier's annotation bag.
-func convertSharedSpecTo(src *DynamoComponentDeploymentSharedSpec, dst *v1beta1.DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
+func convertDynamoComponentDeploymentSharedSpecTo(src *DynamoComponentDeploymentSharedSpec, dst *v1beta1.DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
 	if src == nil || dst == nil {
 		return nil
 	}
@@ -286,7 +286,7 @@ func convertSharedSpecTo(src *DynamoComponentDeploymentSharedSpec, dst *v1beta1.
 	}
 
 	// Autoscaling -> annotation (deprecated, removed in v1beta1).
-	preserveV1Alpha1OnlySharedFields(src, c)
+	preserveDynamoComponentDeploymentSharedSpecAlphaOnlyFields(src, c)
 
 	// sharedMemory <-> sharedMemorySize (lossy struct flatten).
 	if err := convertSharedMemoryTo(src.SharedMemory, dst, c); err != nil {
@@ -294,7 +294,7 @@ func convertSharedSpecTo(src *DynamoComponentDeploymentSharedSpec, dst *v1beta1.
 	}
 
 	// volumeMounts + useAsCompilationCache -> compilationCache (the container
-	// volumeMounts themselves are emitted by buildPodTemplateTo).
+	// volumeMounts themselves are emitted by buildPodTemplateSpecTo).
 	for _, vm := range src.VolumeMounts {
 		if vm.UseAsCompilationCache {
 			dst.CompilationCache = &v1beta1.CompilationCacheConfig{
@@ -312,10 +312,10 @@ func convertSharedSpecTo(src *DynamoComponentDeploymentSharedSpec, dst *v1beta1.
 	convertExperimentalTo(src, dst, c)
 
 	// Resources + envs + probes + mainContainer -> podTemplate.containers[main].
-	return buildPodTemplateTo(src, dst, c)
+	return buildPodTemplateSpecTo(src, dst, c)
 }
 
-func preserveV1Alpha1OnlySharedFields(src *DynamoComponentDeploymentSharedSpec, c *annCarrier) {
+func preserveDynamoComponentDeploymentSharedSpecAlphaOnlyFields(src *DynamoComponentDeploymentSharedSpec, c *annCarrier) {
 	// Autoscaling -> annotation (deprecated, removed in v1beta1).
 	if src.Autoscaling != nil {
 		if data, err := json.Marshal(src.Autoscaling); err == nil {
@@ -361,7 +361,7 @@ func preserveV1Alpha1OnlySharedFields(src *DynamoComponentDeploymentSharedSpec, 
 	}
 }
 
-func fillSharedAlphaOnlyFromPreserved(dst *DynamoComponentDeploymentSharedSpec, preserved *DynamoComponentDeploymentSharedSpec) {
+func restoreDynamoComponentDeploymentSharedSpecAlphaOnlyFields(dst *DynamoComponentDeploymentSharedSpec, preserved *DynamoComponentDeploymentSharedSpec) {
 	if dst == nil || preserved == nil {
 		return
 	}
@@ -399,7 +399,7 @@ func fillSharedAlphaOnlyFromPreserved(dst *DynamoComponentDeploymentSharedSpec, 
 	}
 }
 
-func hasSharedAlphaOnlyFields(src *DynamoComponentDeploymentSharedSpec) bool {
+func dynamoComponentDeploymentSharedSpecHasAlphaOnlyFields(src *DynamoComponentDeploymentSharedSpec) bool {
 	if src == nil {
 		return false
 	}
@@ -415,8 +415,8 @@ func hasSharedAlphaOnlyFields(src *DynamoComponentDeploymentSharedSpec) bool {
 			src.ExtraPodSpec.MainContainer.Name != "")
 }
 
-// convertSharedSpecFrom performs the inverse: v1beta1 -> v1alpha1.
-func convertSharedSpecFrom(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
+// convertDynamoComponentDeploymentSharedSpecFrom performs the inverse: v1beta1 -> v1alpha1.
+func convertDynamoComponentDeploymentSharedSpecFrom(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
 	if src == nil || dst == nil {
 		return nil
 	}
@@ -503,7 +503,7 @@ func convertSharedSpecFrom(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst
 
 	// podTemplate -> mainContainer + extraPodSpec + extraPodMetadata +
 	// Resources + Envs + Probes (+ FrontendSidecar).
-	return decomposePodTemplate(src, dst, c)
+	return decomposePodTemplateSpec(src, dst, c)
 }
 
 // ---------------------------------------------------------------------------
@@ -607,7 +607,7 @@ func convertSharedMemoryFrom(src *resource.Quantity, dst *DynamoComponentDeploym
 // convertVolumeMountsFrom is the v1beta1 -> v1alpha1 inverse: it synthesises
 // a single flagged entry in dst.VolumeMounts when the v1beta1 side declares
 // a CompilationCacheConfig. Non-cache mounts on the main container are
-// preserved through decomposePodTemplate's ExtraPodSpec.MainContainer copy,
+// preserved through decomposePodTemplateSpec's ExtraPodSpec.MainContainer copy,
 // not here.
 func convertVolumeMountsFrom(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst *DynamoComponentDeploymentSharedSpec) {
 	if src.CompilationCache == nil {
@@ -885,12 +885,12 @@ func checkpointFromV1beta1(src *v1beta1.ComponentCheckpointConfig, enabled bool)
 // podTemplate (the big one)
 // ---------------------------------------------------------------------------
 
-// buildPodTemplateTo composes the v1beta1 podTemplate from v1alpha1's flat
+// buildPodTemplateSpecTo composes the v1beta1 podTemplate from v1alpha1's flat
 // fields (Resources, Envs, Probes, EnvFromSecret, ExtraPodSpec,
 // ExtraPodMetadata, FrontendSidecar) following the same merge precedence the
 // v1alpha1 controller uses at reconcile time: ExtraPodSpec.MainContainer wins
 // over dedicated fields, except for env which is additive.
-func buildPodTemplateTo(src *DynamoComponentDeploymentSharedSpec, dst *v1beta1.DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
+func buildPodTemplateSpecTo(src *DynamoComponentDeploymentSharedSpec, dst *v1beta1.DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
 	_, podTemplateOrigin := c.get(suffixPodTemplateOrig)
 	frontendSidecarRef, hasFrontendSidecarRef := c.get(suffixFrontendSidecarRef)
 	if hasFrontendSidecarRef && !hasPodTemplateContent(src, podTemplateOrigin) {
@@ -1044,8 +1044,8 @@ func buildMainContainerFromDedicated(src *DynamoComponentDeploymentSharedSpec) c
 	return ctr
 }
 
-// decomposePodTemplate inverts buildPodTemplateTo.
-func decomposePodTemplate(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
+// decomposePodTemplateSpec inverts buildPodTemplateSpecTo.
+func decomposePodTemplateSpec(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
 	if src.PodTemplate == nil {
 		if v, ok := c.get(suffixPodMetadataOrig); ok {
 			var meta ExtraPodMetadata
@@ -1145,7 +1145,7 @@ func decomposePodTemplate(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst 
 	// true escape-hatch remainder.
 	podSpecCopy := podTpl.Spec.DeepCopy()
 	podSpecCopy.Containers = other
-	// The forward path (buildPodTemplateTo) always emits a "main" container,
+	// The forward path (buildPodTemplateSpecTo) always emits a "main" container,
 	// even when v1alpha1 had no main-container fields set (e.g. only
 	// FrontendSidecar triggered hasAny). Skip recording it on the v1alpha1
 	// side when every field other than Name is zero-valued, so that
@@ -1237,8 +1237,8 @@ func restoreDedicatedOriginFields(dst *DynamoComponentDeploymentSharedSpec, c *a
 }
 
 // containerIsEmpty reports whether c has no user-visible fields set. Used by
-// decomposePodTemplate to drop the "main" container synthesized by
-// buildPodTemplateTo when v1alpha1 had no main-container fields of its own.
+// decomposePodTemplateSpec to drop the "main" container synthesized by
+// buildPodTemplateSpecTo when v1alpha1 had no main-container fields of its own.
 // Name is expected to have been cleared by the caller.
 func containerIsEmpty(c *corev1.Container) bool {
 	if c == nil {
