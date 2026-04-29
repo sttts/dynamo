@@ -123,14 +123,14 @@ type annCarrier struct {
 	prefix string
 }
 
-// newDynamoGraphDeploymentComponentCarrier returns a carrier scoped to a named component on the
-// DGD object: keys are of the form "nvidia.com/dgd-comp-<name>-<suffix>".
+// newDynamoGraphDeploymentComponentCarrier returns a carrier scoped to a named
+// component on the DGD object: keys are of the form "nvidia.com/dgd-comp-<name>-<suffix>".
 func newDynamoGraphDeploymentComponentCarrier(obj metav1.Object, componentName string) *annCarrier {
 	return &annCarrier{obj: obj, prefix: annDGDCompPrefix + componentName + "-"}
 }
 
-// newDynamoComponentDeploymentCarrier returns a carrier scoped to a standalone DCD: keys are of the
-// form "nvidia.com/dcd-<suffix>".
+// newDynamoComponentDeploymentCarrier returns a carrier scoped to a standalone
+// DCD: keys are of the form "nvidia.com/dcd-<suffix>".
 func newDynamoComponentDeploymentCarrier(obj metav1.Object) *annCarrier {
 	return &annCarrier{obj: obj, prefix: annDCDPrefix}
 }
@@ -226,8 +226,9 @@ func scrubAnnotationsByPrefix(obj metav1.Object, prefix string) {
 
 // convertDynamoComponentDeploymentSharedSpecTo converts a v1alpha1 DynamoComponentDeploymentSharedSpec
 // into its v1beta1 counterpart. Lossy-direction fields are preserved on the
-// carrier's annotation bag.
-func convertDynamoComponentDeploymentSharedSpecTo(src *DynamoComponentDeploymentSharedSpec, dst *v1beta1.DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
+// carrier's annotation bag. preserved is the decoded hub-side subtree, used
+// only at the end to restore fields v1alpha1 cannot represent.
+func convertDynamoComponentDeploymentSharedSpecTo(src *DynamoComponentDeploymentSharedSpec, dst *v1beta1.DynamoComponentDeploymentSharedSpec, c *annCarrier, preserved *v1beta1.DynamoComponentDeploymentSharedSpec) error {
 	if src == nil || dst == nil {
 		return nil
 	}
@@ -312,7 +313,13 @@ func convertDynamoComponentDeploymentSharedSpecTo(src *DynamoComponentDeployment
 	convertExperimentalTo(src, dst, c)
 
 	// Resources + envs + probes + mainContainer -> podTemplate.containers[main].
-	return buildPodTemplateSpecTo(src, dst, c)
+	if err := buildPodTemplateSpecTo(src, dst, c); err != nil {
+		return err
+	}
+
+	// Restore unrepresentable fields.
+	restoreDynamoComponentDeploymentSharedSpecHubOnlyFields(dst, preserved)
+	return nil
 }
 
 func preserveDynamoComponentDeploymentSharedSpecAlphaOnlyFields(src *DynamoComponentDeploymentSharedSpec, c *annCarrier) {
@@ -385,18 +392,6 @@ func restoreDynamoComponentDeploymentSharedSpecAlphaOnlyFields(dst *DynamoCompon
 	if len(dst.Labels) == 0 {
 		dst.Labels = maps.Clone(preserved.Labels)
 	}
-	if dst.EnvFromSecret == nil && preserved.EnvFromSecret != nil {
-		dst.EnvFromSecret = ptr.To(*preserved.EnvFromSecret)
-	}
-	if dst.ExtraPodSpec == nil && preserved.ExtraPodSpec != nil {
-		cp := *preserved.ExtraPodSpec.DeepCopy()
-		dst.ExtraPodSpec = &cp
-	}
-	if dst.ExtraPodSpec != nil && dst.ExtraPodSpec.MainContainer != nil &&
-		dst.ExtraPodSpec.MainContainer.Name == "" &&
-		preserved.ExtraPodSpec != nil && preserved.ExtraPodSpec.MainContainer != nil {
-		dst.ExtraPodSpec.MainContainer.Name = preserved.ExtraPodSpec.MainContainer.Name
-	}
 }
 
 func dynamoComponentDeploymentSharedSpecHasAlphaOnlyFields(src *DynamoComponentDeploymentSharedSpec) bool {
@@ -416,7 +411,7 @@ func dynamoComponentDeploymentSharedSpecHasAlphaOnlyFields(src *DynamoComponentD
 }
 
 // convertDynamoComponentDeploymentSharedSpecFrom performs the inverse: v1beta1 -> v1alpha1.
-func convertDynamoComponentDeploymentSharedSpecFrom(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
+func convertDynamoComponentDeploymentSharedSpecFrom(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst *DynamoComponentDeploymentSharedSpec, c *annCarrier, preserved *DynamoComponentDeploymentSharedSpec) error {
 	if src == nil || dst == nil {
 		return nil
 	}
@@ -484,11 +479,6 @@ func convertDynamoComponentDeploymentSharedSpecFrom(src *v1beta1.DynamoComponent
 		}
 		c.del(suffixLabels)
 	}
-	if v, ok := c.get(suffixEnvFromSecret); ok {
-		dst.EnvFromSecret = ptr.To(v)
-		c.del(suffixEnvFromSecret)
-	}
-
 	// sharedMemorySize -> SharedMemorySpec.
 	convertSharedMemoryFrom(src.SharedMemorySize, dst, c)
 
@@ -503,7 +493,13 @@ func convertDynamoComponentDeploymentSharedSpecFrom(src *v1beta1.DynamoComponent
 
 	// podTemplate -> mainContainer + extraPodSpec + extraPodMetadata +
 	// Resources + Envs + Probes (+ FrontendSidecar).
-	return decomposePodTemplateSpec(src, dst, c)
+	if err := decomposePodTemplateSpec(src, dst, c); err != nil {
+		return err
+	}
+
+	// Restore unrepresentable fields.
+	restoreDynamoComponentDeploymentSharedSpecAlphaOnlyFields(dst, preserved)
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -885,7 +881,7 @@ func checkpointFromV1beta1(src *v1beta1.ComponentCheckpointConfig, enabled bool)
 // podTemplate (the big one)
 // ---------------------------------------------------------------------------
 
-// buildPodTemplateSpecTo composes the v1beta1 podTemplate from v1alpha1's flat
+// buildPodTemplateSpecTo composes the v1beta1 PodTemplateSpec from v1alpha1's flat
 // fields (Resources, Envs, Probes, EnvFromSecret, ExtraPodSpec,
 // ExtraPodMetadata, FrontendSidecar) following the same merge precedence the
 // v1alpha1 controller uses at reconcile time: ExtraPodSpec.MainContainer wins
@@ -1011,6 +1007,126 @@ func applyFrontendSidecarToPodTemplate(src *DynamoComponentDeploymentSharedSpec,
 	}
 }
 
+func restoreDynamoComponentDeploymentSharedSpecHubOnlyFields(dst, preserved *v1beta1.DynamoComponentDeploymentSharedSpec) {
+	if dst == nil || preserved == nil {
+		return
+	}
+	restorePodTemplateSpecHubOnlyFields(&dst.PodTemplate, preserved.PodTemplate)
+	if dst.FrontendSidecar == nil && preserved.FrontendSidecar != nil {
+		dst.FrontendSidecar = ptr.To(*preserved.FrontendSidecar)
+	}
+	if dst.Experimental == nil && preserved.Experimental != nil {
+		dst.Experimental = preserved.Experimental.DeepCopy()
+	}
+}
+
+func restorePodTemplateSpecHubOnlyFields(dst **corev1.PodTemplateSpec, preserved *corev1.PodTemplateSpec) {
+	if preserved == nil {
+		return
+	}
+	if *dst == nil {
+		if !podTemplateSpecHasHubOnlyObjectMeta(preserved) && !podTemplateSpecHasHubOnlyContainerShape(preserved) {
+			return
+		}
+		*dst = &corev1.PodTemplateSpec{}
+	}
+
+	restoreObjectMetaHubOnlyFields(&(*dst).ObjectMeta, &preserved.ObjectMeta)
+	restorePodSpecHubOnlyFields(&(*dst).Spec, &preserved.Spec)
+}
+
+func restoreObjectMetaHubOnlyFields(dst, preserved *metav1.ObjectMeta) {
+	labels := dst.Labels
+	annotations := dst.Annotations
+	*dst = *preserved.DeepCopy()
+	dst.Labels = labels
+	dst.Annotations = annotations
+}
+
+func restorePodSpecHubOnlyFields(dst, preserved *corev1.PodSpec) {
+	if len(dst.Containers) == 0 && podSpecHasOnlySyntheticEmptyMainContainer(preserved) {
+		dst.Containers = slices.Clone(preserved.Containers)
+	}
+	if !podSpecHasMainContainer(preserved) {
+		removePodSpecSyntheticEmptyMainContainer(dst)
+	}
+	if len(dst.Containers) > 1 && len(preserved.Containers) > 1 {
+		reorderPodSpecContainersLikePreserved(dst, preserved.Containers)
+	}
+}
+
+func podTemplateSpecHasHubOnlyObjectMeta(podTpl *corev1.PodTemplateSpec) bool {
+	if podTpl == nil {
+		return false
+	}
+	meta := podTpl.ObjectMeta.DeepCopy()
+	meta.Labels = nil
+	meta.Annotations = nil
+	return !apiequality.Semantic.DeepEqual(*meta, metav1.ObjectMeta{})
+}
+
+func podTemplateSpecHasHubOnlyContainerShape(podTpl *corev1.PodTemplateSpec) bool {
+	if podTpl == nil {
+		return false
+	}
+	return len(podTpl.Spec.Containers) == 0 ||
+		!podSpecHasMainContainer(&podTpl.Spec) ||
+		podSpecHasOnlySyntheticEmptyMainContainer(&podTpl.Spec)
+}
+
+func podTemplateSpecHasHubOnlyFields(podTpl *corev1.PodTemplateSpec) bool {
+	return podTemplateSpecHasHubOnlyObjectMeta(podTpl) || podTemplateSpecHasHubOnlyContainerShape(podTpl)
+}
+
+func podSpecHasMainContainer(podSpec *corev1.PodSpec) bool {
+	if podSpec == nil {
+		return false
+	}
+	for i := range podSpec.Containers {
+		if podSpec.Containers[i].Name == mainContainerName {
+			return true
+		}
+	}
+	return false
+}
+
+func podSpecHasOnlySyntheticEmptyMainContainer(podSpec *corev1.PodSpec) bool {
+	if podSpec == nil || len(podSpec.Containers) != 1 || podSpec.Containers[0].Name != mainContainerName {
+		return false
+	}
+	withoutContainers := podSpec.DeepCopy()
+	withoutContainers.Containers = nil
+	return podSpecIsZero(withoutContainers) && containerIsEmpty(&podSpec.Containers[0])
+}
+
+func removePodSpecSyntheticEmptyMainContainer(podSpec *corev1.PodSpec) {
+	filtered := podSpec.Containers[:0]
+	for i := range podSpec.Containers {
+		ctr := podSpec.Containers[i]
+		if ctr.Name == mainContainerName && containerIsEmpty(&ctr) {
+			continue
+		}
+		filtered = append(filtered, podSpec.Containers[i])
+	}
+	podSpec.Containers = filtered
+}
+
+func reorderPodSpecContainersLikePreserved(podSpec *corev1.PodSpec, preserved []corev1.Container) {
+	remaining := slices.Clone(podSpec.Containers)
+	ordered := make([]corev1.Container, 0, len(remaining))
+	for _, want := range preserved {
+		for i := range remaining {
+			if remaining[i].Name != want.Name {
+				continue
+			}
+			ordered = append(ordered, remaining[i])
+			remaining = slices.Delete(remaining, i, i+1)
+			break
+		}
+	}
+	podSpec.Containers = append(ordered, remaining...)
+}
+
 // buildMainContainerFromDedicated collects the v1alpha1 flat fields into a
 // corev1.Container named "main".
 func buildMainContainerFromDedicated(src *DynamoComponentDeploymentSharedSpec) corev1.Container {
@@ -1035,6 +1151,9 @@ func buildMainContainerFromDedicated(src *DynamoComponentDeploymentSharedSpec) c
 		ctr.ReadinessProbe = src.ReadinessProbe.DeepCopy()
 	}
 	for _, vm := range src.VolumeMounts {
+		if vm.UseAsCompilationCache {
+			continue
+		}
 		mp := vm.MountPoint
 		ctr.VolumeMounts = append(ctr.VolumeMounts, corev1.VolumeMount{
 			Name:      vm.Name,
@@ -1047,22 +1166,9 @@ func buildMainContainerFromDedicated(src *DynamoComponentDeploymentSharedSpec) c
 // decomposePodTemplateSpec inverts buildPodTemplateSpecTo.
 func decomposePodTemplateSpec(src *v1beta1.DynamoComponentDeploymentSharedSpec, dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) error {
 	if src.PodTemplate == nil {
-		if v, ok := c.get(suffixPodMetadataOrig); ok {
-			var meta ExtraPodMetadata
-			if err := json.Unmarshal([]byte(v), &meta); err == nil {
-				dst.ExtraPodMetadata = &meta
-			}
-			c.del(suffixPodMetadataOrig)
-		}
-		// Restore FrontendSidecar from origin annotation even if there is no
-		// podTemplate (uncommon but possible for manual edits).
-		if v, ok := c.get(suffixFrontendSidecar); ok {
-			var fs FrontendSidecarSpec
-			if err := json.Unmarshal([]byte(v), &fs); err == nil {
-				dst.FrontendSidecar = &fs
-			}
-			c.del(suffixFrontendSidecar)
-		}
+		c.del(suffixPodMetadataOrig)
+		c.del(suffixFrontendSidecar)
+		c.del(suffixEnvFromSecret)
 		if src.FrontendSidecar != nil {
 			c.set(suffixFrontendSidecarRef, *src.FrontendSidecar)
 		}
@@ -1072,7 +1178,9 @@ func decomposePodTemplateSpec(src *v1beta1.DynamoComponentDeploymentSharedSpec, 
 	podTpl := src.PodTemplate.DeepCopy()
 	if v, ok := c.get(suffixPodTemplateOrig); ok {
 		c.del(suffixPodTemplateOrig)
-		if v != "generated" {
+		if v == "generated" && podTemplateSpecMatchesGeneratedShape(podTpl) {
+			c.set(suffixPodTemplateOrig, "generated")
+		} else if v != "generated" || !podTemplateSpecMatchesGeneratedShape(podTpl) {
 			c.set(suffixPodTemplateOrig, annotationTrue)
 		}
 	} else {
@@ -1082,8 +1190,13 @@ func decomposePodTemplateSpec(src *v1beta1.DynamoComponentDeploymentSharedSpec, 
 	// ExtraPodMetadata from podTemplate.metadata.
 	if v, ok := c.get(suffixPodMetadataOrig); ok {
 		var meta ExtraPodMetadata
-		if err := json.Unmarshal([]byte(v), &meta); err == nil {
+		if err := json.Unmarshal([]byte(v), &meta); err == nil && extraPodMetadataMatchesPodTemplateSpec(meta, podTpl) {
 			dst.ExtraPodMetadata = &meta
+		} else if len(podTpl.Annotations) > 0 || len(podTpl.Labels) > 0 {
+			dst.ExtraPodMetadata = &ExtraPodMetadata{
+				Annotations: maps.Clone(podTpl.Annotations),
+				Labels:      maps.Clone(podTpl.Labels),
+			}
 		}
 		c.del(suffixPodMetadataOrig)
 	} else if len(podTpl.Annotations) > 0 || len(podTpl.Labels) > 0 {
@@ -1121,23 +1234,26 @@ func decomposePodTemplateSpec(src *v1beta1.DynamoComponentDeploymentSharedSpec, 
 	if src.FrontendSidecar != nil {
 		if v, ok := c.get(suffixFrontendSidecar); ok {
 			var fs FrontendSidecarSpec
-			if err := json.Unmarshal([]byte(v), &fs); err == nil {
+			if err := json.Unmarshal([]byte(v), &fs); err == nil &&
+				frontendSidecarOriginMatches(*src.FrontendSidecar, other, &fs) {
 				dst.FrontendSidecar = &fs
+				filtered := other[:0]
+				for _, ctr := range other {
+					if ctr.Name != *src.FrontendSidecar {
+						filtered = append(filtered, ctr)
+					}
+				}
+				other = filtered
+			} else {
+				c.set(suffixFrontendSidecarRef, *src.FrontendSidecar)
 			}
 			c.del(suffixFrontendSidecar)
-			filtered := other[:0]
-			for _, ctr := range other {
-				if ctr.Name != *src.FrontendSidecar {
-					filtered = append(filtered, ctr)
-				}
-			}
-			other = filtered
 		} else {
 			c.set(suffixFrontendSidecarRef, *src.FrontendSidecar)
 		}
 	}
 
-	restoreDedicatedFieldsFromMain(main, dst, c)
+	restoreDynamoComponentDeploymentSharedSpecFieldsFromMainContainer(main, dst, c)
 
 	// Put everything non-main into ExtraPodSpec. The main-container fields
 	// that v1alpha1 can represent directly have already been moved into their
@@ -1172,18 +1288,54 @@ func decomposePodTemplateSpec(src *v1beta1.DynamoComponentDeploymentSharedSpec, 
 	return nil
 }
 
-func restoreDedicatedFieldsFromMain(main *corev1.Container, dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) {
+func extraPodMetadataMatchesPodTemplateSpec(meta ExtraPodMetadata, podTpl *corev1.PodTemplateSpec) bool {
+	return maps.Equal(meta.Annotations, podTpl.Annotations) &&
+		maps.Equal(meta.Labels, podTpl.Labels) &&
+		!podTemplateSpecHasHubOnlyObjectMeta(podTpl)
+}
+
+func podTemplateSpecMatchesGeneratedShape(podTpl *corev1.PodTemplateSpec) bool {
+	if podTpl == nil || !apiequality.Semantic.DeepEqual(podTpl.ObjectMeta, metav1.ObjectMeta{}) {
+		return false
+	}
+	return podSpecHasOnlySyntheticEmptyMainContainer(&podTpl.Spec)
+}
+
+func frontendSidecarOriginMatches(ref string, containers []corev1.Container, fs *FrontendSidecarSpec) bool {
+	if ref != defaultFrontendSidecarContainerName {
+		return false
+	}
+	var expectedPodTpl corev1.PodTemplateSpec
+	appendFrontendSidecar(&expectedPodTpl, fs)
+	if len(expectedPodTpl.Spec.Containers) != 1 {
+		return false
+	}
+	expected := expectedPodTpl.Spec.Containers[0]
+	for i := range containers {
+		if containers[i].Name == ref {
+			return apiequality.Semantic.DeepEqual(containers[i], expected)
+		}
+	}
+	return false
+}
+
+func restoreDynamoComponentDeploymentSharedSpecFieldsFromMainContainer(main *corev1.Container, dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) {
 	if main == nil {
-		restoreDedicatedOriginFields(dst, c)
+		restoreDynamoComponentDeploymentSharedSpecOriginFields(dst, c)
 		return
 	}
 
 	if v, ok := c.get(suffixResourcesOrigin); ok {
 		var resources Resources
 		if err := json.Unmarshal([]byte(v), &resources); err == nil {
-			dst.Resources = &resources
-			main.Resources = corev1.ResourceRequirements{}
+			origin := resourcesToNative(&resources)
+			if reflect.DeepEqual(main.Resources, origin) {
+				dst.Resources = &resources
+			} else if resources := resourcesFromNative(main.Resources); resources != nil {
+				dst.Resources = resources
+			}
 		}
+		main.Resources = corev1.ResourceRequirements{}
 		c.del(suffixResourcesOrigin)
 	} else if resources := resourcesFromNative(main.Resources); resources != nil {
 		dst.Resources = resources
@@ -1193,21 +1345,33 @@ func restoreDedicatedFieldsFromMain(main *corev1.Container, dst *DynamoComponent
 	if v, ok := c.get(suffixVolumeMountsOrig); ok {
 		var volumeMounts []VolumeMount
 		if err := json.Unmarshal([]byte(v), &volumeMounts); err == nil {
-			dst.VolumeMounts = volumeMounts
-			main.VolumeMounts = nil
+			origin := volumeMountsToNative(volumeMounts)
+			if reflect.DeepEqual(main.VolumeMounts, origin) {
+				dst.VolumeMounts = volumeMounts
+				main.VolumeMounts = nil
+			} else {
+				dedicated, extra := splitVolumeMountsFromNative(main.VolumeMounts)
+				dst.VolumeMounts = appendMissingVolumeMounts(dst.VolumeMounts, dedicated)
+				main.VolumeMounts = extra
+			}
 		}
 		c.del(suffixVolumeMountsOrig)
 	} else if len(main.VolumeMounts) > 0 {
-		dst.VolumeMounts = appendMissingVolumeMounts(dst.VolumeMounts, volumeMountsFromNative(main.VolumeMounts))
-		main.VolumeMounts = nil
+		dedicated, extra := splitVolumeMountsFromNative(main.VolumeMounts)
+		dst.VolumeMounts = appendMissingVolumeMounts(dst.VolumeMounts, dedicated)
+		main.VolumeMounts = extra
 	}
 
 	if len(main.Env) > 0 {
 		dst.Envs = slices.Clone(main.Env)
 		main.Env = nil
 	}
-	if dst.EnvFromSecret != nil && envFromSecretMatches(main.EnvFrom, *dst.EnvFromSecret) {
-		main.EnvFrom = nil
+	if v, ok := c.get(suffixEnvFromSecret); ok {
+		if envFromSecretMatches(main.EnvFrom, v) {
+			dst.EnvFromSecret = ptr.To(v)
+			main.EnvFrom = nil
+		}
+		c.del(suffixEnvFromSecret)
 	}
 	if main.LivenessProbe != nil {
 		dst.LivenessProbe = main.LivenessProbe.DeepCopy()
@@ -1219,21 +1383,10 @@ func restoreDedicatedFieldsFromMain(main *corev1.Container, dst *DynamoComponent
 	}
 }
 
-func restoreDedicatedOriginFields(dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) {
-	if v, ok := c.get(suffixResourcesOrigin); ok {
-		var resources Resources
-		if err := json.Unmarshal([]byte(v), &resources); err == nil {
-			dst.Resources = &resources
-		}
-		c.del(suffixResourcesOrigin)
-	}
-	if v, ok := c.get(suffixVolumeMountsOrig); ok {
-		var volumeMounts []VolumeMount
-		if err := json.Unmarshal([]byte(v), &volumeMounts); err == nil {
-			dst.VolumeMounts = volumeMounts
-		}
-		c.del(suffixVolumeMountsOrig)
-	}
+func restoreDynamoComponentDeploymentSharedSpecOriginFields(dst *DynamoComponentDeploymentSharedSpec, c *annCarrier) {
+	c.del(suffixEnvFromSecret)
+	c.del(suffixResourcesOrigin)
+	c.del(suffixVolumeMountsOrig)
 }
 
 // containerIsEmpty reports whether c has no user-visible fields set. Used by
@@ -1406,6 +1559,47 @@ func volumeMountsFromNative(mounts []corev1.VolumeMount) []VolumeMount {
 	return out
 }
 
+func splitVolumeMountsFromNative(mounts []corev1.VolumeMount) ([]VolumeMount, []corev1.VolumeMount) {
+	if len(mounts) == 0 {
+		return nil, nil
+	}
+	dedicated := make([]VolumeMount, 0, len(mounts))
+	extra := make([]corev1.VolumeMount, 0, len(mounts))
+	for _, mount := range mounts {
+		if volumeMountRoundTripsThroughDedicated(mount) {
+			dedicated = append(dedicated, VolumeMount{
+				Name:       mount.Name,
+				MountPoint: mount.MountPath,
+			})
+			continue
+		}
+		extra = append(extra, mount)
+	}
+	return dedicated, extra
+}
+
+func volumeMountRoundTripsThroughDedicated(mount corev1.VolumeMount) bool {
+	roundTripped := corev1.VolumeMount{
+		Name:      mount.Name,
+		MountPath: mount.MountPath,
+	}
+	return reflect.DeepEqual(mount, roundTripped)
+}
+
+func volumeMountsToNative(mounts []VolumeMount) []corev1.VolumeMount {
+	if len(mounts) == 0 {
+		return nil
+	}
+	out := make([]corev1.VolumeMount, 0, len(mounts))
+	for _, mount := range mounts {
+		out = append(out, corev1.VolumeMount{
+			Name:      mount.Name,
+			MountPath: mount.MountPoint,
+		})
+	}
+	return out
+}
+
 func volumeMountsRoundTripThroughHub(mounts []VolumeMount) bool {
 	if len(mounts) == 0 {
 		return true
@@ -1432,7 +1626,9 @@ func appendMissingVolumeMounts(dst []VolumeMount, mounts []VolumeMount) []Volume
 	for _, mount := range mounts {
 		exists := false
 		for _, existing := range dst {
-			if existing.Name == mount.Name && existing.MountPoint == mount.MountPoint {
+			if existing.Name == mount.Name &&
+				existing.MountPoint == mount.MountPoint &&
+				existing.UseAsCompilationCache == mount.UseAsCompilationCache {
 				exists = true
 				break
 			}

@@ -48,23 +48,26 @@ func (src *DynamoComponentDeployment) ConvertTo(dstRaw conversion.Hub) error {
 	}
 
 	dst.ObjectMeta = *src.ObjectMeta.DeepCopy()
-	restoredHubSpec := false
+	var preservedHubSpec *v1beta1.DynamoComponentDeploymentSpec
 
 	if raw, ok := dst.ObjectMeta.Annotations[annDCDHubSpec]; ok && raw != "" {
 		if spec, ok := restoreDynamoComponentDeploymentHubSpec(raw); ok {
-			dst.Spec = spec
-			restoredHubSpec = true
+			preservedHubSpec = &spec
 			delAnnFromObj(&dst.ObjectMeta, annDCDHubSpec)
 		}
 	}
-	hubOrigin := restoredHubSpec || dst.ObjectMeta.Annotations[annDCDHubOrigin] == annotationTrue
+	hubOrigin := preservedHubSpec != nil || dst.ObjectMeta.Annotations[annDCDHubOrigin] == annotationTrue
 	delAnnFromObj(&dst.ObjectMeta, annDCDHubOrigin)
 
 	var semantic v1beta1.DynamoComponentDeploymentSpec
 	semantic.BackendFramework = src.Spec.BackendFramework
 	carrier := newDynamoComponentDeploymentCarrier(&dst.ObjectMeta)
+	var preservedShared *v1beta1.DynamoComponentDeploymentSharedSpec
+	if preservedHubSpec != nil {
+		preservedShared = &preservedHubSpec.DynamoComponentDeploymentSharedSpec
+	}
 	if err := convertDynamoComponentDeploymentSharedSpecTo(&src.Spec.DynamoComponentDeploymentSharedSpec,
-		&semantic.DynamoComponentDeploymentSharedSpec, carrier); err != nil {
+		&semantic.DynamoComponentDeploymentSharedSpec, carrier, preservedShared); err != nil {
 		return err
 	}
 
@@ -77,11 +80,7 @@ func (src *DynamoComponentDeployment) ConvertTo(dstRaw conversion.Hub) error {
 	if semantic.ComponentName == "" && !hubOrigin {
 		semantic.ComponentName = dst.ObjectMeta.Name
 	}
-	if restoredHubSpec {
-		overlayDynamoComponentDeploymentHubSpec(&dst.Spec, &semantic)
-	} else {
-		dst.Spec = semantic
-	}
+	dst.Spec = semantic
 
 	preserveSpoke := !hubOrigin || dynamoComponentDeploymentSharedSpecHasAlphaOnlyFields(&src.Spec.DynamoComponentDeploymentSharedSpec)
 	if hubOrigin {
@@ -107,32 +106,6 @@ func preserveDynamoComponentDeploymentSpoke(src *DynamoComponentDeployment, dst 
 			dst.ObjectMeta.Annotations = map[string]string{}
 		}
 		dst.ObjectMeta.Annotations[annDCDSpokeStatus] = string(data)
-	}
-}
-
-func overlayDynamoComponentDeploymentHubSpec(base *v1beta1.DynamoComponentDeploymentSpec, semantic *v1beta1.DynamoComponentDeploymentSpec) {
-	hubPodTemplate := base.PodTemplate
-	hubFrontendSidecar := base.FrontendSidecar
-	hubExperimental := base.Experimental
-
-	*base = *semantic.DeepCopy()
-	if hubPodTemplate != nil {
-		base.PodTemplate = hubPodTemplate
-	}
-	if base.FrontendSidecar == nil {
-		base.FrontendSidecar = hubFrontendSidecar
-	}
-	if base.Experimental == nil {
-		base.Experimental = hubExperimental
-	}
-}
-
-func restoreDynamoComponentDeploymentSpokeFromPreserved(dstSpec *DynamoComponentDeploymentSpec, dstStatus *DynamoComponentDeploymentStatus, preservedSpec *DynamoComponentDeploymentSpec, preservedStatus *DynamoComponentDeploymentStatus) {
-	if preservedSpec != nil {
-		restoreDynamoComponentDeploymentSharedSpecAlphaOnlyFields(&dstSpec.DynamoComponentDeploymentSharedSpec, &preservedSpec.DynamoComponentDeploymentSharedSpec)
-	}
-	if preservedStatus != nil && dstStatus.Service != nil && preservedStatus.Service != nil && dstStatus.Service.ComponentName == "" {
-		dstStatus.Service.ComponentName = preservedStatus.Service.ComponentName
 	}
 }
 
@@ -200,27 +173,33 @@ func (dst *DynamoComponentDeployment) ConvertFrom(srcRaw conversion.Hub) error {
 	}
 	// Fast path only: the fingerprint covers the hub spec/status snapshot, so
 	// matching means no hub fields changed. Metadata was copied above and rides along.
-	if preservedSpokeSpec != nil && dynamoComponentDeploymentSpokeHubUnmodified(src) {
+	spokeHubUnmodified := preservedSpokeSpec != nil && dynamoComponentDeploymentSpokeHubUnmodified(src)
+	if spokeHubUnmodified {
 		dst.Spec = *preservedSpokeSpec.DeepCopy()
 		if preservedSpokeStatus != nil {
 			dst.Status = *preservedSpokeStatus.DeepCopy()
 		} else {
-			convertDynamoComponentDeploymentStatusFrom(&src.Status, &dst.Status)
+			convertDynamoComponentDeploymentStatusFrom(&src.Status, &dst.Status, nil)
 		}
 		scrubDynamoComponentDeploymentAnnotations(&dst.ObjectMeta)
 		delAnnFromObj(&dst.ObjectMeta, annDCDHubOrigin)
 		return nil
 	}
 
-	generatedPodTemplate := src.ObjectMeta.Annotations[annDCDPrefix+suffixPodTemplateOrig] == "generated"
+	generatedPodTemplate := src.ObjectMeta.Annotations[annDCDPrefix+suffixPodTemplateOrig] == "generated" &&
+		preservedSpokeSpec == nil &&
+		preservedSpokeStatus == nil
 	carrier := newDynamoComponentDeploymentCarrier(&dst.ObjectMeta)
+	var preservedShared *DynamoComponentDeploymentSharedSpec
+	if preservedSpokeSpec != nil {
+		preservedShared = &preservedSpokeSpec.DynamoComponentDeploymentSharedSpec
+	}
 	if err := convertDynamoComponentDeploymentSharedSpecFrom(&src.Spec.DynamoComponentDeploymentSharedSpec,
-		&dst.Spec.DynamoComponentDeploymentSharedSpec, carrier); err != nil {
+		&dst.Spec.DynamoComponentDeploymentSharedSpec, carrier, preservedShared); err != nil {
 		return err
 	}
 
-	convertDynamoComponentDeploymentStatusFrom(&src.Status, &dst.Status)
-	restoreDynamoComponentDeploymentSpokeFromPreserved(&dst.Spec, &dst.Status, preservedSpokeSpec, preservedSpokeStatus)
+	convertDynamoComponentDeploymentStatusFrom(&src.Status, &dst.Status, preservedSpokeStatus)
 	scrubDynamoComponentDeploymentAnnotations(&dst.ObjectMeta)
 	if dynamoComponentDeploymentNeedsHubSpecPreservation(&src.Spec, generatedPodTemplate) {
 		data, err := marshalDynamoComponentDeploymentHubSpec(&src.Spec)
@@ -273,7 +252,7 @@ func restoreDynamoComponentDeploymentSpokeSpec(raw string) (DynamoComponentDeplo
 }
 
 func dynamoComponentDeploymentNeedsHubSpecPreservation(src *v1beta1.DynamoComponentDeploymentSpec, generatedPodTemplate bool) bool {
-	if generatedPodTemplate {
+	if generatedPodTemplate && !podTemplateSpecHasHubOnlyFields(src.PodTemplate) {
 		return false
 	}
 	return src.FrontendSidecar != nil ||
@@ -313,7 +292,7 @@ func convertDynamoComponentDeploymentStatusTo(src *DynamoComponentDeploymentStat
 	// v1beta1 inputs, which do not carry PodSelector.
 }
 
-func convertDynamoComponentDeploymentStatusFrom(src *v1beta1.DynamoComponentDeploymentStatus, dst *DynamoComponentDeploymentStatus) {
+func convertDynamoComponentDeploymentStatusFrom(src *v1beta1.DynamoComponentDeploymentStatus, dst *DynamoComponentDeploymentStatus, preserved *DynamoComponentDeploymentStatus) {
 	dst.ObservedGeneration = src.ObservedGeneration
 	if len(src.Conditions) > 0 {
 		dst.Conditions = make([]metav1.Condition, 0, len(src.Conditions))
@@ -323,6 +302,15 @@ func convertDynamoComponentDeploymentStatusFrom(src *v1beta1.DynamoComponentDepl
 	}
 	if src.Component != nil {
 		dst.Service = convertReplicaStatusFrom(src.Component)
+	}
+
+	// Restore unrepresentable fields.
+	restoreDynamoComponentDeploymentStatusAlphaOnlyFields(dst, preserved)
+}
+
+func restoreDynamoComponentDeploymentStatusAlphaOnlyFields(dst *DynamoComponentDeploymentStatus, preserved *DynamoComponentDeploymentStatus) {
+	if preserved != nil && dst.Service != nil && preserved.Service != nil && dst.Service.ComponentName == "" {
+		dst.Service.ComponentName = preserved.Service.ComponentName
 	}
 }
 
