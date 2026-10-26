@@ -23,6 +23,7 @@ import (
 	commoncontroller "github.com/ai-dynamo/dynamo/deploy/operator/internal/controller_common"
 	"github.com/ai-dynamo/dynamo/deploy/operator/internal/dgdrrunpublisher"
 	"github.com/ai-dynamo/dynamo/deploy/operator/internal/gpu"
+	"github.com/ai-dynamo/dynamo/deploy/operator/internal/versionoverride"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -83,6 +84,7 @@ type DynamoGraphDeploymentRunV1beta2Reconciler struct {
 	Config                  *configv1alpha1.OperatorConfiguration
 	RuntimeConfig           *commoncontroller.RuntimeConfig
 	Hardware                dgdrRunHardwareDiscoverer
+	DynamoVersion           string
 	OperatorImage           string
 	OperatorImagePullPolicy corev1.PullPolicy
 }
@@ -289,7 +291,7 @@ func (r *DynamoGraphDeploymentRunV1beta2Reconciler) reconcileInput(
 			}
 		}
 	}
-	contents, snapshotPath, err := dgdrRunInput(run, input, execution.GPUsPerNode)
+	contents, snapshotPath, err := dgdrRunInput(run, input, r.DynamoVersion, execution.GPUsPerNode)
 	if err != nil {
 		return dgdrRunExecution{}, err
 	}
@@ -342,12 +344,13 @@ func (r *DynamoGraphDeploymentRunV1beta2Reconciler) discoverGPUsPerNode(
 func dgdrRunInput(
 	run *nvidiacomv1beta2.DynamoGraphDeploymentRun,
 	parameters map[string]any,
+	dynamoVersion string,
 	gpusPerNode int,
 ) ([]byte, string, error) {
 	if run.Spec.Recommendation == nil || run.Spec.Recommendation.MaxCandidates < 1 {
 		return nil, "", errors.New("spec.recommendation.maxCandidates must be defaulted before the Run is created")
 	}
-	underlay := map[string]any{"dgdr_run": map[string]any{
+	output := map[string]any{
 		"name":                  run.Name,
 		"snapshot_dir":          dgdrRunSnapshotPath,
 		"namespace":             run.Namespace,
@@ -355,7 +358,14 @@ func dgdrRunInput(
 		"derive_runtime_images": true,
 		"num_gpus_per_node":     int64(gpusPerNode),
 		"max_candidates":        int64(run.Spec.Recommendation.MaxCandidates),
-	}}
+	}
+	if _, err := versionoverride.ParseImageVersion(run.Spec.AISimulate.Image); err != nil {
+		if _, versionErr := versionoverride.Parse(dynamoVersion); versionErr != nil {
+			return nil, "", fmt.Errorf("resolve Dynamo version for planner image %q: %w", run.Spec.AISimulate.Image, versionErr)
+		}
+		output["runtime_version_override"] = dynamoVersion
+	}
+	underlay := map[string]any{"dgdr_run": output}
 	input := aisimulate.MergeParameters(underlay, parameters)
 	snapshotPath := dgdrRunSnapshotPath
 	if configured, found, err := unstructured.NestedString(input, "dgdr_run", "snapshot_dir"); err == nil && found && path.IsAbs(configured) {
