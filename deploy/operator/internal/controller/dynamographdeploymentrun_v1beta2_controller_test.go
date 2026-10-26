@@ -73,6 +73,7 @@ func newDGDRRunFixture(t *testing.T, hardware dgdrRunHardwareDiscoverer, objects
 		reconciler: &DynamoGraphDeploymentRunV1beta2Reconciler{
 			Client:                  c,
 			Hardware:                hardware,
+			DynamoVersion:           "1.2.3",
 			OperatorImage:           "example.com/dynamo-operator:1.2.3",
 			OperatorImagePullPolicy: corev1.PullAlways,
 		},
@@ -172,6 +173,15 @@ func assertDGDRRunJobIsolation(
 	if sweeper.Image != run.Spec.AISimulate.Image {
 		t.Fatalf("sweeper image = %q, want %q", sweeper.Image, run.Spec.AISimulate.Image)
 	}
+	if want := []string{"aisimulate"}; !reflect.DeepEqual(sweeper.Command, want) {
+		t.Fatalf("sweeper command = %q, want %q", sweeper.Command, want)
+	}
+	if want := []string{
+		"recommend", "--stack", "dynamo", "--config", dgdrRunInputPath,
+		"--output", "dgdr_run", "--output-dir", "/work/results",
+	}; !reflect.DeepEqual(sweeper.Args, want) {
+		t.Fatalf("sweeper args = %q, want %q", sweeper.Args, want)
+	}
 	if publisher.Image != operatorImage || publisher.ImagePullPolicy != corev1.PullAlways {
 		t.Fatalf("publisher image = %q/%s, want configured operator image/Always", publisher.Image, publisher.ImagePullPolicy)
 	}
@@ -215,6 +225,46 @@ func assertDGDRRunInput(t *testing.T, c client.Client, job *batchv1.Job, hardwar
 	}
 	if !reflect.DeepEqual(hardware.calls, []nvidiacomv1beta1.GPUSKUType{"h200_sxm"}) {
 		t.Fatalf("hardware discovery calls = %v, want one filtered call", hardware.calls)
+	}
+}
+
+func TestDGDRRunInputResolvesRuntimeVersion(t *testing.T) {
+	tests := []struct {
+		name          string
+		plannerImage  string
+		dynamoVersion string
+		wantOverride  string
+		wantErr       bool
+	}{
+		{name: "canonical planner tag", plannerImage: "example.com/dynamo-planner:1.7.0"},
+		{name: "opaque CI tag", plannerImage: "example.com/dynamo-planner:git-sha", dynamoVersion: "1.7.0", wantOverride: "1.7.0"},
+		{name: "opaque tag without canonical version", plannerImage: "example.com/dynamo-planner:git-sha", dynamoVersion: "1.7", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			run := dgdrRunForTest(t, map[string]any{})
+			run.Spec.AISimulate.Image = tt.plannerImage
+
+			contents, _, err := dgdrRunInput(run, map[string]any{}, tt.dynamoVersion, 8)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("lower input error = %v, wantErr %t", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			input := map[string]any{}
+			if err := yaml.Unmarshal(contents, &input); err != nil {
+				t.Fatalf("decode input: %v", err)
+			}
+			output := input["dgdr_run"].(map[string]any)
+			got, found := output["runtime_version_override"]
+			if tt.wantOverride == "" && found {
+				t.Fatalf("dgdr_run.runtime_version_override = %v, want omitted", got)
+			}
+			if tt.wantOverride != "" && got != tt.wantOverride {
+				t.Fatalf("dgdr_run.runtime_version_override = %v, want %s", got, tt.wantOverride)
+			}
+		})
 	}
 }
 
